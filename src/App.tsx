@@ -190,6 +190,7 @@ export default function App() {
             user={user}
             setView={setView}
             onToast={addToast}
+            isSimulator={isSimulator}
           />
         )}
 
@@ -198,6 +199,7 @@ export default function App() {
             user={user}
             setView={setView}
             onToast={addToast}
+            isSimulator={isSimulator}
           />
         )}
 
@@ -206,6 +208,7 @@ export default function App() {
             user={user}
             setView={setView}
             onToast={addToast}
+            isSimulator={isSimulator}
           />
         )}
 
@@ -215,6 +218,7 @@ export default function App() {
             setView={setView}
             onRegistered={refresh}
             onToast={addToast}
+            isSimulator={isSimulator}
           />
         )}
 
@@ -222,21 +226,22 @@ export default function App() {
           <DonorsDirectory
             user={user}
             setView={setView}
+            isSimulator={isSimulator}
           />
         )}
 
         {view === 'compatibility' && (
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className={`w-full ${isSimulator ? 'px-3 py-4' : 'max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8'} overflow-x-hidden`}>
             <CompatibilityMatrix />
           </div>
         )}
 
         {view === 'eligibility-quiz' && (
-          <EligibilityQuiz setView={setView} />
+          <EligibilityQuiz setView={setView} isSimulator={isSimulator} />
         )}
 
         {view === 'blood-banks' && (
-          <BloodBanks setView={setView} />
+          <BloodBanks setView={setView} isSimulator={isSimulator} />
         )}
       </main>
 

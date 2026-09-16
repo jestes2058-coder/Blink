@@ -22,9 +22,10 @@ interface Props {
   user: CurrentUser
   setView: (v: View) => void
   onRequestForDonor?: (donor: Donor) => void
+  isSimulator?: boolean
 }
 
-export default function DonorsDirectory({ user, setView }: Props) {
+export default function DonorsDirectory({ user, setView, isSimulator = false }: Props) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedBloodGroup, setSelectedBloodGroup] = useState<BloodGroup | 'ALL'>('ALL')
   const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL')
@@ -48,22 +49,22 @@ export default function DonorsDirectory({ user, setView }: Props) {
   })
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6'} overflow-x-hidden`}>
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl mb-8 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl mb-4 sm:mb-6 relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
           <div className="flex items-center gap-2 mb-2">
             <span className="p-1.5 rounded-xl bg-white/20 backdrop-blur-md">
-              <Users className="w-5 h-5 text-red-200" />
+              <Users className="w-4 h-4 text-red-200" />
             </span>
-            <span className="text-xs font-bold uppercase tracking-widest text-red-200">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-200">
               Community Network
             </span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "'DM Serif Display', serif" }}>
             Registered Volunteer Donors
           </h1>
-          <p className="text-red-100 text-sm sm:text-base leading-relaxed">
+          <p className="text-red-100 text-xs sm:text-sm leading-relaxed">
             Search active donors by district and blood group. Direct contact details remain protected and are securely shared upon request confirmation.
           </p>
         </div>
@@ -178,7 +179,7 @@ export default function DonorsDirectory({ user, setView }: Props) {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className={`grid grid-cols-1 ${!isSimulator ? 'md:grid-cols-2 lg:grid-cols-3' : ''} gap-3 sm:gap-5`}>
           {filteredDonors.map((donor) => {
             const isEligible = canDonate(donor)
             const daysSince = daysSinceLastDonation(donor)

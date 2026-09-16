@@ -28,9 +28,10 @@ interface Props {
   user: CurrentUser
   setView: (v: View) => void
   onToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
+  isSimulator?: boolean
 }
 
-export default function RequestBlood({ user, setView, onToast }: Props) {
+export default function RequestBlood({ user, setView, onToast, isSimulator = false }: Props) {
   const [step, setStep] = useState<'form' | 'preview' | 'done'>('form')
   const [patientName, setPatientName] = useState('')
   const [bloodGroup, setBloodGroup] = useState<BloodGroup>('O+')
@@ -99,38 +100,29 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
 
   if (step === 'done') {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center">
-        <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-          <Droplet className="w-10 h-10 text-red-600 fill-red-600 animate-pulse" />
+      <div className={`w-full ${isSimulator ? 'px-3 py-6' : 'max-w-2xl mx-auto px-4 py-12'} text-center space-y-6`}>
+        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-100 shadow-sm animate-bounce">
+          <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-3" style={{ fontFamily: "'DM Serif Display', serif" }}>
-          Blood Request Broadcasted!
-        </h2>
-        <p className="text-gray-600 text-sm mb-4 max-w-md mx-auto">
-          {matchCount > 0
-            ? `${matchCount} eligible verified donor${matchCount > 1 ? 's have' : ' has'} been alerted immediately via private notification.`
-            : `Your request has been filed for ${district}. Donors in this district will be alerted as they enter eligibility.`}
-        </p>
-
-        <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-800 text-left max-w-md mx-auto mb-8 space-y-1">
-          <p className="font-bold flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-blue-600" /> Privacy & Contact Sharing
-          </p>
-          <p>
-            Your phone number ({user.phone}) and patient details will only be revealed to donors after they click <strong>Accept</strong> in their alerts.
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            Blood Request Broadcasted!
+          </h2>
+          <p className="text-gray-500 text-xs sm:text-sm mt-2 max-w-md mx-auto">
+            Your emergency request has been matched with eligible district donors. You will receive live response alerts on your dashboard.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <button
             onClick={() => setView('my-requests')}
-            className="px-6 py-3.5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-2xl shadow-lg shadow-red-200 transition"
+            className="w-full sm:w-auto px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-bold rounded-xl sm:rounded-2xl transition shadow-md shadow-red-200 text-xs sm:text-sm"
           >
             Track in My Requests
           </button>
           <button
             onClick={() => setView('home')}
-            className="px-6 py-3.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold rounded-2xl transition"
+            className="w-full sm:w-auto px-6 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold rounded-xl sm:rounded-2xl transition text-xs sm:text-sm"
           >
             Return to Dashboard
           </button>
@@ -141,83 +133,83 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
 
   if (step === 'preview') {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="bg-gradient-to-r from-red-900 to-rose-900 rounded-3xl p-6 text-white shadow-xl mb-6">
+      <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-2xl mx-auto px-4 py-8 space-y-6'} overflow-x-hidden`}>
+        <div className="bg-gradient-to-r from-red-900 to-rose-900 rounded-3xl p-5 sm:p-6 text-white shadow-xl">
           <button
             onClick={() => setStep('form')}
-            className="text-red-200 hover:text-white text-xs font-bold mb-3 flex items-center gap-1"
+            className="text-red-200 hover:text-white text-xs font-bold mb-2 flex items-center gap-1"
           >
             ← Back to Edit
           </button>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ fontFamily: "'DM Serif Display', serif" }}>
-            Confirm & Broadcast Request
+            Confirm Request
           </h1>
-          <p className="text-red-100 text-xs mt-1">Review patient details and matching reach before submitting</p>
+          <p className="text-red-100 text-xs mt-1">Review patient details and matching reach</p>
         </div>
 
-        <div className="bg-white rounded-3xl border border-red-100 shadow-sm p-6 sm:p-8 space-y-6">
+        <div className="bg-white rounded-3xl border border-red-100 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Summary Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Patient</p>
-              <h3 className="text-xl font-bold text-gray-900">{patientName}</h3>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Patient</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">{patientName}</h3>
             </div>
             <UrgencyBadge urgency={urgency} />
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-4 text-xs">
-            <div className="bg-gray-50 p-4 rounded-2xl">
-              <p className="text-gray-400 font-semibold mb-1">Blood Group Needed</p>
-              <BloodBadge group={bloodGroup} size="lg" />
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-4 text-xs">
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-2xl">
+              <p className="text-gray-400 font-semibold mb-1 text-[11px]">Blood Group Needed</p>
+              <BloodBadge group={bloodGroup} size="sm" />
             </div>
-            <div className="bg-gray-50 p-4 rounded-2xl">
-              <p className="text-gray-400 font-semibold mb-1">Hospital / Clinic</p>
-              <p className="text-sm font-bold text-gray-800">{hospital}</p>
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-2xl">
+              <p className="text-gray-400 font-semibold mb-1 text-[11px]">Hospital / Clinic</p>
+              <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{hospital}</p>
             </div>
-            <div className="bg-gray-50 p-4 rounded-2xl">
-              <p className="text-gray-400 font-semibold mb-1">District Location</p>
-              <p className="text-sm font-bold text-gray-800">{district}</p>
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-2xl">
+              <p className="text-gray-400 font-semibold mb-1 text-[11px]">District Location</p>
+              <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{district}</p>
             </div>
-            <div className="bg-gray-50 p-4 rounded-2xl">
-              <p className="text-gray-400 font-semibold mb-1">Units Required</p>
-              <p className="text-sm font-bold text-gray-800">{unitsNeeded} Unit{unitsNeeded > 1 ? 's' : ''}</p>
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-2xl">
+              <p className="text-gray-400 font-semibold mb-1 text-[11px]">Units Required</p>
+              <p className="text-xs sm:text-sm font-bold text-gray-800">{unitsNeeded} Unit{unitsNeeded > 1 ? 's' : ''}</p>
             </div>
           </div>
 
           {notes && (
-            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 text-xs">
-              <p className="font-bold text-gray-700 mb-1">Special Clinical Notes:</p>
+            <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100 text-xs">
+              <p className="font-bold text-gray-700 mb-0.5">Clinical Notes:</p>
               <p className="text-gray-600">{notes}</p>
             </div>
           )}
 
           {/* Real-time Match Reach Box */}
-          <div className={`p-4 rounded-2xl border ${
+          <div className={`p-3.5 rounded-2xl border ${
             matchCount > 0
               ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
               : 'bg-amber-50 border-amber-200 text-amber-950'
           }`}>
-            <div className="flex items-center gap-2 font-bold text-sm">
-              <Users className="w-5 h-5" />
+            <div className="flex items-center gap-2 font-bold text-xs sm:text-sm">
+              <Users className="w-4 h-4 flex-shrink-0" />
               <span>
                 {matchCount > 0
                   ? `${matchCount} eligible volunteer donor${matchCount > 1 ? 's' : ''} found in ${district}`
-                  : `0 eligible donors in ${district} right now`}
+                  : `0 donors in ${district} right now`}
               </span>
             </div>
-            <p className="text-xs mt-1 opacity-90">
+            <p className="text-[11px] mt-1 opacity-90">
               {matchCount > 0
-                ? 'Matched donors will receive an instant push notification on their dashboard.'
+                ? 'Matched donors will receive an instant emergency push notification.'
                 : 'Your request will stay active on the emergency board and match when donors become available.'}
             </p>
           </div>
 
           <button
             onClick={handleSubmit}
-            className="w-full py-4 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-sm sm:text-base transition shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+            className="w-full py-3 sm:py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-xl sm:rounded-2xl text-xs sm:text-sm transition shadow-lg shadow-red-200 flex items-center justify-center gap-2"
           >
-            <Droplet className="w-5 h-5 fill-white" />
+            <Droplet className="w-4 h-4 fill-white" />
             <span>Submit Blood Request & Alert Donors</span>
           </button>
         </div>
@@ -226,26 +218,26 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6'} overflow-x-hidden`}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl mb-8">
+      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl mb-4 sm:mb-6">
         <div className="flex items-center gap-2 mb-2">
           <span className="p-1.5 rounded-xl bg-white/20">
-            <Droplet className="w-5 h-5 text-red-200 fill-red-200" />
+            <Droplet className="w-4 h-4 text-red-200 fill-red-200" />
           </span>
-          <span className="text-xs font-bold uppercase tracking-widest text-red-200">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-200">
             Donor Matching Engine
           </span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style={{ fontFamily: "'DM Serif Display', serif" }}>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1" style={{ fontFamily: "'DM Serif Display', serif" }}>
           Request Blood for Patient
         </h1>
-        <p className="text-red-100 text-xs sm:text-sm max-w-xl">
-          Broadcast your urgent blood requirement to verified volunteer donors in your specific medical district.
+        <p className="text-red-100 text-xs sm:text-sm">
+          Broadcast your urgent blood requirement to verified volunteer donors in your district.
         </p>
       </div>
 
-      <form onSubmit={handlePreview} className="bg-white rounded-3xl border border-red-100 shadow-sm p-6 sm:p-8 space-y-6">
+      <form onSubmit={handlePreview} className="bg-white rounded-3xl border border-red-100 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5">
         {error && (
           <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm font-semibold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" /> {error}

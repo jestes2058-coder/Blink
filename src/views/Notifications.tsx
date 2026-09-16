@@ -33,9 +33,10 @@ interface Props {
   user: CurrentUser
   setView: (v: View) => void
   onToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
+  isSimulator?: boolean
 }
 
-export default function Notifications({ user, setView, onToast }: Props) {
+export default function Notifications({ user, setView, onToast, isSimulator = false }: Props) {
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [, forceUpdate] = useState(0)
   const refresh = () => forceUpdate(n => n + 1)
@@ -46,33 +47,33 @@ export default function Notifications({ user, setView, onToast }: Props) {
   // If not a registered donor yet
   if (!myProfile) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6">
-        <div className="w-20 h-20 bg-red-50 text-red-700 rounded-3xl flex items-center justify-center mx-auto border border-red-100 shadow-sm">
-          <Bell className="w-10 h-10" />
+      <div className={`w-full ${isSimulator ? 'px-3 py-6 space-y-4' : 'max-w-2xl mx-auto px-4 py-12 space-y-6'} text-center`}>
+        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-50 text-red-700 rounded-3xl flex items-center justify-center mx-auto border border-red-100 shadow-sm">
+          <Bell className="w-8 h-8 sm:w-10 sm:h-10" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
             Enable Emergency Donor Alerts
           </h2>
-          <p className="text-gray-500 text-sm mt-2 max-w-md mx-auto">
-            You are currently signed in as a general user. Join the volunteer donor registry to receive instant alerts whenever patients matching your blood group in your district need emergency aid.
+          <p className="text-gray-500 text-xs sm:text-sm mt-2 max-w-md mx-auto">
+            Join the volunteer donor registry to receive instant alerts whenever patients matching your blood group in your district need emergency aid.
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-red-100 shadow-sm text-left max-w-md mx-auto space-y-3 text-xs">
+        <div className="p-4 rounded-2xl bg-white border border-red-100 shadow-sm text-left max-w-md mx-auto space-y-2 text-xs">
           <p className="font-bold text-gray-900 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" /> How Donor Notifications Work:
+            <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" /> How Notifications Work:
           </p>
-          <div className="space-y-2 text-gray-600">
-            <p>1. Patients or hospital attendants in your district file an urgent blood request.</p>
-            <p>2. Our matching engine verifies your 90-day cooldown and transfusion compatibility.</p>
-            <p>3. You receive an alert with patient details and choose to Accept or Decline with complete privacy.</p>
+          <div className="space-y-1.5 text-gray-600 text-[11px] sm:text-xs">
+            <p>1. Patients in your district file an urgent blood request.</p>
+            <p>2. Our matching engine verifies your 90-day cooldown and compatibility.</p>
+            <p>3. You receive an alert and choose to Accept or Decline with complete privacy.</p>
           </div>
         </div>
 
         <button
           onClick={() => setView('register-donor')}
-          className="px-8 py-4 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-sm rounded-2xl shadow-lg shadow-red-200 transition"
+          className="w-full sm:w-auto px-6 py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md transition"
         >
           Register as Volunteer Donor
         </button>
@@ -85,14 +86,10 @@ export default function Notifications({ user, setView, onToast }: Props) {
   const requests = store.getRequests()
 
   // Collect all requests that match this donor:
-  // 1) Requests explicitly matching their donor ID/phone
-  // 2) Open requests in their district matching their blood compatibility
   const myMatches = requests.filter(r => {
-    // Explicit match
     const hasExplicitMatch = r.matches.some(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
     if (hasExplicitMatch) return true
 
-    // District + Blood Group compatibility match
     if (r.status === 'open' && r.district === myProfile.district) {
       const compatible = COMPATIBLE_DONORS[r.bloodGroup] || []
       return compatible.includes(myProfile.bloodGroup) && r.requestorPhone !== myProfile.phone
@@ -103,7 +100,6 @@ export default function Notifications({ user, setView, onToast }: Props) {
 
   const pending = myMatches.filter(r => {
     const match = r.matches.find(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
-    // If no match entry yet but matches district & compatible, it's pending
     if (!match && r.status === 'open') return true
     return match?.status === 'pending'
   })
@@ -166,24 +162,24 @@ export default function Notifications({ user, setView, onToast }: Props) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6'} overflow-x-hidden`}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl">
+      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl mb-4 sm:mb-6">
         <div className="flex items-center gap-2 mb-2">
           <span className="p-1.5 rounded-xl bg-white/20">
-            <Bell className="w-5 h-5 text-red-200" />
+            <Bell className="w-4 h-4 text-red-200" />
           </span>
-          <span className="text-xs font-bold uppercase tracking-widest text-red-200">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-200">
             Donor Alert Center
           </span>
         </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style={{ fontFamily: "'DM Serif Display', serif" }}>
-              Emergency Match Notifications
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1" style={{ fontFamily: "'DM Serif Display', serif" }}>
+              Match Notifications
             </h1>
             <p className="text-red-100 text-xs sm:text-sm">
-              Live alerts for patients in <strong>{myProfile.district}</strong> matching your <strong>{myProfile.bloodGroup}</strong> blood group.
+              Live alerts for <strong>{myProfile.district}</strong> matching your <strong>{myProfile.bloodGroup}</strong> blood group.
             </p>
           </div>
 
@@ -191,12 +187,12 @@ export default function Notifications({ user, setView, onToast }: Props) {
             <button
               onClick={handleTestAlert}
               title="Test notification alert sound"
-              className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 text-xs font-bold transition flex items-center gap-1.5"
+              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/20 text-xs font-bold transition flex items-center gap-1.5"
             >
-              <Volume2 className="w-4 h-4 text-yellow-300" />
-              <span className="hidden sm:inline">Test Alert Sound</span>
+              <Volume2 className="w-3.5 h-3.5 text-yellow-300" />
+              <span>Test Chime</span>
             </button>
-            <BloodBadge group={myProfile.bloodGroup} size="lg" />
+            <BloodBadge group={myProfile.bloodGroup} size="sm" />
           </div>
         </div>
       </div>

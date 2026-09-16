@@ -17,6 +17,7 @@ import type { View } from '../types'
 
 interface Props {
   setView: (v: View) => void
+  isSimulator?: boolean
 }
 
 interface Question {

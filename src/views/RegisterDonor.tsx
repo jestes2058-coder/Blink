@@ -20,9 +20,10 @@ interface Props {
   setView: (v: View) => void
   onRegistered: () => void
   onToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
+  isSimulator?: boolean
 }
 
-export default function RegisterDonor({ user, setView, onRegistered, onToast }: Props) {
+export default function RegisterDonor({ user, setView, onRegistered, onToast, isSimulator = false }: Props) {
   const existing = store.getDonors().find(d => d.phone === user.phone || d.id === user.id)
   const [bloodGroup, setBloodGroup] = useState<BloodGroup>(existing?.bloodGroup ?? 'O+')
   const [district, setDistrict] = useState(existing?.district ?? 'Central District')
@@ -65,17 +66,17 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast }: 
 
   if (saved) {
     return (
-      <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-          <Heart className="w-10 h-10 fill-emerald-600 animate-pulse" />
+      <div className={`w-full ${isSimulator ? 'px-3 py-6' : 'max-w-md mx-auto px-4 py-16'} text-center space-y-4`}>
+        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+          <Heart className="w-8 h-8 sm:w-10 sm:h-10 fill-emerald-600 animate-pulse" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'DM Serif Display', serif" }}>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
           {existing ? 'Profile Updated!' : 'Welcome to BloodLink!'}
         </h2>
-        <p className="text-gray-500 text-sm mb-6">
+        <p className="text-gray-500 text-xs sm:text-sm">
           Your voluntary donor status is active for <strong>{bloodGroup}</strong> blood in <strong>{district}</strong>.
         </p>
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 text-left">
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 text-left">
           <p className="font-bold flex items-center gap-1.5 mb-1">
             <ShieldCheck className="w-4 h-4 text-emerald-600" /> Privacy Protected
           </p>
@@ -88,18 +89,18 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast }: 
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6'} overflow-x-hidden`}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl">
+      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl mb-4 sm:mb-6">
         <div className="flex items-center gap-2 mb-2">
           <span className="p-1.5 rounded-xl bg-white/20">
-            <Heart className="w-5 h-5 text-red-200 fill-red-200" />
+            <Heart className="w-4 h-4 text-red-200 fill-red-200" />
           </span>
-          <span className="text-xs font-bold uppercase tracking-widest text-red-200">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-200">
             Donor Registry
           </span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style={{ fontFamily: "'DM Serif Display', serif" }}>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1" style={{ fontFamily: "'DM Serif Display', serif" }}>
           {existing ? 'Update Volunteer Profile' : 'Register as Blood Donor'}
         </h1>
         <p className="text-red-100 text-xs sm:text-sm">
@@ -107,7 +108,7 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast }: 
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-red-100 shadow-sm p-6 sm:p-8 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-red-100 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5">
         {error && (
           <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
             {error}
