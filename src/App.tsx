@@ -171,15 +171,17 @@ export default function App() {
         onLogout={handleLogout}
         onOpenSOS={() => setShowSOSModal(true)}
         pendingAlertsCount={pendingCount}
+        isSimulator={isSimulator}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-24 lg:pb-12">
+      <main className="flex-1 pb-24 lg:pb-12 overflow-x-hidden">
         {view === 'home' && (
           <Home
             user={user}
             setView={setView}
             onOpenSOS={() => setShowSOSModal(true)}
+            isSimulator={isSimulator}
           />
         )}
 

@@ -34,9 +34,10 @@ interface Props {
   user: CurrentUser
   setView: (v: View) => void
   onOpenSOS: () => void
+  isSimulator?: boolean
 }
 
-export default function Home({ user, setView, onOpenSOS }: Props) {
+export default function Home({ user, setView, onOpenSOS, isSimulator = false }: Props) {
   const [showDonorCardModal, setShowDonorCardModal] = useState(false)
 
   const donors = store.getDonors()
@@ -58,71 +59,71 @@ export default function Home({ user, setView, onOpenSOS }: Props) {
   const donorBadge = myDonorProfile ? getDonorBadge(myDonorProfile.totalDonations) : null
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8'} overflow-x-hidden`}>
       {/* Hero Banner with Stats */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-950 via-red-800 to-rose-900 text-white p-6 sm:p-10 shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-950 via-red-900 to-rose-950 text-white p-5 sm:p-8 shadow-xl">
         {/* Background ambient lighting */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-red-200 text-xs font-semibold mb-3 border border-white/10">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              <span>District Blood Transfusion & Matching Platform</span>
+        <div className={`relative z-10 flex flex-col ${!isSimulator ? 'lg:flex-row lg:items-center' : ''} justify-between gap-5`}>
+          <div className="w-full max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-red-200 text-[11px] font-semibold mb-2.5 border border-white/10">
+              <Sparkles className="w-3 h-3 text-yellow-300" />
+              <span>Transfusion & Matching Engine</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight break-words" style={{ fontFamily: "'DM Serif Display', serif" }}>
               Welcome back, {user.name}
             </h1>
-            <p className="mt-2 text-sm sm:text-base text-red-100 leading-relaxed">
+            <p className="mt-1.5 text-xs sm:text-sm text-red-100/90 leading-relaxed">
               Real-time matching connects verified district blood donors with patients in need — ensuring rapid emergency response with complete privacy.
             </p>
 
             {/* Quick Action buttons */}
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
               <button
                 onClick={() => setView('request-blood')}
-                className="px-5 py-3 bg-white text-red-900 hover:bg-red-50 font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-black/20 transition flex items-center gap-2 active:scale-95"
+                className="w-full py-2.5 px-3 bg-white text-red-900 hover:bg-red-50 font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95"
               >
-                <Droplet className="w-4 h-4 fill-red-700 text-red-700" />
+                <Droplet className="w-4 h-4 fill-red-700 text-red-700 flex-shrink-0" />
                 <span>Request Blood</span>
               </button>
 
               <button
                 onClick={onOpenSOS}
-                className="px-5 py-3 bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs sm:text-sm rounded-2xl border border-red-400/40 transition flex items-center gap-2 active:scale-95 animate-pulse"
+                className="w-full py-2.5 px-3 bg-red-600 hover:bg-red-500 text-white font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl border border-red-400/40 transition flex items-center justify-center gap-1.5 active:scale-95 animate-pulse"
               >
-                <Flame className="w-4 h-4 text-yellow-300" />
+                <Flame className="w-4 h-4 text-yellow-300 flex-shrink-0" />
                 <span>Emergency SOS</span>
               </button>
 
               {myDonorProfile && (
                 <button
                   onClick={() => setShowDonorCardModal(true)}
-                  className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm rounded-2xl border border-white/20 transition flex items-center gap-2"
+                  className="w-full py-2.5 px-3 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm rounded-xl sm:rounded-2xl border border-white/20 transition flex items-center justify-center gap-1.5 truncate"
                 >
-                  <Award className="w-4 h-4 text-yellow-300" />
-                  <span>My Donor ID Card</span>
+                  <Award className="w-4 h-4 text-yellow-300 flex-shrink-0" />
+                  <span className="truncate">Donor ID Card</span>
                 </button>
               )}
             </div>
           </div>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-3 gap-3 w-full lg:w-auto min-w-[280px]">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
-              <Users className="w-5 h-5 text-red-200 mx-auto mb-1" />
-              <p className="text-2xl sm:text-3xl font-black text-white">{totalDonors}</p>
-              <p className="text-[11px] font-semibold text-red-200">Active Donors</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full lg:w-auto flex-shrink-0">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/10">
+              <Users className="w-4 h-4 text-red-200 mx-auto mb-0.5" />
+              <p className="text-xl sm:text-2xl font-black text-white">{totalDonors}</p>
+              <p className="text-[10px] font-semibold text-red-200 truncate">Active Donors</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
-              <AlertCircle className="w-5 h-5 text-amber-300 mx-auto mb-1" />
-              <p className="text-2xl sm:text-3xl font-black text-white">{totalOpenRequests}</p>
-              <p className="text-[11px] font-semibold text-red-200">Open Requests</p>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/10">
+              <AlertCircle className="w-4 h-4 text-amber-300 mx-auto mb-0.5" />
+              <p className="text-xl sm:text-2xl font-black text-white">{totalOpenRequests}</p>
+              <p className="text-[10px] font-semibold text-red-200 truncate">Open Requests</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
-              <ShieldCheck className="w-5 h-5 text-emerald-300 mx-auto mb-1" />
-              <p className="text-2xl sm:text-3xl font-black text-white">100%</p>
-              <p className="text-[11px] font-semibold text-red-200">Privacy Safe</p>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/10">
+              <ShieldCheck className="w-4 h-4 text-emerald-300 mx-auto mb-0.5" />
+              <p className="text-xl sm:text-2xl font-black text-white">100%</p>
+              <p className="text-[10px] font-semibold text-red-200 truncate">Privacy Safe</p>
             </div>
           </div>
         </div>
@@ -155,42 +156,42 @@ export default function Home({ user, setView, onOpenSOS }: Props) {
       )}
 
       {/* Main 2-Column Dashboard Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className={`grid grid-cols-1 ${!isSimulator ? 'lg:grid-cols-3' : ''} gap-4 sm:gap-6`}>
         {/* Left 2 Columns: Donor Status + Quick Actions + Live Emergency Feed */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className={`${!isSimulator ? 'lg:col-span-2' : ''} space-y-4 sm:space-y-6`}>
           {/* Donor Profile Status Card */}
           {myDonorProfile ? (
-            <div className="bg-white rounded-3xl border border-red-100 p-6 shadow-sm">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+            <div className="bg-white rounded-3xl border border-red-100 p-4 sm:p-6 shadow-sm">
+              <div className="flex items-start justify-between mb-4 gap-2">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
                     eligible ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                   }`}>
-                    {eligible ? <CheckCircle className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+                    {eligible ? <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" /> : <Clock className="w-5 h-5 sm:w-6 sm:h-6" />}
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-lg">
-                      {eligible ? 'You are Eligible to Donate Blood' : 'Donation Interval Cooldown Active'}
+                    <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-tight">
+                      {eligible ? 'Eligible to Donate Blood' : 'Donation Cooldown Active'}
                     </h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
                       {eligible
-                        ? daysSince !== null ? `Last donated ${daysSince} days ago · Ready for active requests` : 'No prior donation cooldown on record'
-                        : nextDate ? `Medical 90-day cooldown until ${nextDate.toLocaleDateString()}` : 'Cooldown active'}
+                        ? daysSince !== null ? `Last donated ${daysSince} days ago · Active` : 'Ready for active requests'
+                        : nextDate ? `Cooldown until ${nextDate.toLocaleDateString()}` : 'Cooldown active'}
                     </p>
                   </div>
                 </div>
 
-                <BloodBadge group={myDonorProfile.bloodGroup} size="lg" />
+                <BloodBadge group={myDonorProfile.bloodGroup} size="sm" />
               </div>
 
               {/* Progress bar if in cooldown */}
               {!eligible && (
-                <div className="mb-4 p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
-                  <div className="flex justify-between text-xs font-semibold text-amber-800 mb-1.5">
-                    <span>{daysSince ?? 0} of {DONATION_INTERVAL_DAYS} days completed</span>
-                    <span>{Math.max(0, DONATION_INTERVAL_DAYS - (daysSince ?? 0))} days remaining</span>
+                <div className="mb-3.5 p-3 rounded-2xl bg-amber-50/60 border border-amber-200">
+                  <div className="flex justify-between text-[11px] font-semibold text-amber-800 mb-1">
+                    <span>{daysSince ?? 0} of {DONATION_INTERVAL_DAYS} days</span>
+                    <span>{Math.max(0, DONATION_INTERVAL_DAYS - (daysSince ?? 0))}d remaining</span>
                   </div>
-                  <div className="h-2.5 bg-amber-200 rounded-full overflow-hidden">
+                  <div className="h-2 bg-amber-200 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-amber-600 rounded-full transition-all"
                       style={{ width: `${Math.min(100, ((daysSince ?? 0) / DONATION_INTERVAL_DAYS) * 100)}%` }}
@@ -200,42 +201,40 @@ export default function Home({ user, setView, onOpenSOS }: Props) {
               )}
 
               {/* Donor Badges & Details Bar */}
-              <div className="pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
+              <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   {donorBadge && (
-                    <span className="text-xs font-bold px-3 py-1 rounded-xl" style={{ backgroundColor: donorBadge.bgLight, color: donorBadge.color }}>
-                      ★ {donorBadge.title} ({myDonorProfile.totalDonations} donations)
+                    <span className="text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-xl" style={{ backgroundColor: donorBadge.bgLight, color: donorBadge.color }}>
+                      ★ {donorBadge.title} ({myDonorProfile.totalDonations})
                     </span>
                   )}
-                  <span className="text-xs text-gray-500">{myDonorProfile.district}</span>
+                  <span className="text-[11px] text-gray-500">{myDonorProfile.district}</span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowDonorCardModal(true)}
-                    className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1"
-                  >
-                    View ID Card →
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowDonorCardModal(true)}
+                  className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1"
+                >
+                  View ID Card →
+                </button>
               </div>
             </div>
           ) : (
-            <div className="bg-gradient-to-r from-red-50 to-rose-50 rounded-3xl border border-red-200 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center flex-shrink-0">
-                  <Heart className="w-7 h-7 fill-red-600 text-red-600" />
+            <div className="bg-gradient-to-r from-red-50 to-rose-50 rounded-3xl border border-red-200 p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center flex-shrink-0">
+                  <Heart className="w-6 h-6 fill-red-600 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 text-lg">Join the Volunteer Blood Donor Network</h3>
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    Help your local community during medical emergencies. Your contact details remain confidential until you accept a request.
+                  <h3 className="font-bold text-gray-900 text-sm sm:text-base">Join Volunteer Blood Donors</h3>
+                  <p className="text-[11px] text-gray-600 mt-0.5">
+                    Help your local community in emergencies. Contact details stay 100% private.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setView('register-donor')}
-                className="w-full sm:w-auto px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md transition whitespace-nowrap"
+                className="w-full sm:w-auto px-4 py-2.5 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-xl shadow-md transition whitespace-nowrap"
               >
                 Register as Donor
               </button>
@@ -244,50 +243,59 @@ export default function Home({ user, setView, onOpenSOS }: Props) {
 
           {/* Quick Feature Grid */}
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">
               Explore Platform Features
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className={`grid grid-cols-1 ${!isSimulator ? 'sm:grid-cols-3' : ''} gap-2.5 sm:gap-3`}>
               {/* Find Donors */}
               <button
                 onClick={() => setView('donors-directory')}
-                className="p-5 rounded-3xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-200 transition text-left group flex flex-col justify-between"
+                className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-200 transition text-left group flex items-center sm:flex-col justify-between sm:justify-between gap-3"
               >
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Users className="w-5 h-5" />
+                <div className="flex items-center sm:flex-col sm:items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Donor Directory</h4>
+                    <p className="text-[10px] sm:text-xs text-gray-500">Search active district volunteers</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm group-hover:text-red-700 transition">Donor Directory</h4>
-                  <p className="text-xs text-gray-500 mt-1">Search active district volunteers</p>
-                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400 sm:hidden" />
               </button>
 
               {/* Compatibility Matrix */}
               <button
                 onClick={() => setView('compatibility')}
-                className="p-5 rounded-3xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-200 transition text-left group flex flex-col justify-between"
+                className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-200 transition text-left group flex items-center sm:flex-col justify-between sm:justify-between gap-3"
               >
-                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <GitCompare className="w-5 h-5" />
+                <div className="flex items-center sm:flex-col sm:items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                    <GitCompare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Blood Compatibility</h4>
+                    <p className="text-[10px] sm:text-xs text-gray-500">Check medical transfusion matching</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm group-hover:text-red-700 transition">Blood Compatibility</h4>
-                  <p className="text-xs text-gray-500 mt-1">Check medical transfusion matching</p>
-                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400 sm:hidden" />
               </button>
 
               {/* Blood Banks Directory */}
               <button
                 onClick={() => setView('blood-banks')}
-                className="p-5 rounded-3xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-200 transition text-left group flex flex-col justify-between"
+                className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-200 transition text-left group flex items-center sm:flex-col justify-between sm:justify-between gap-3"
               >
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Building2 className="w-5 h-5" />
+                <div className="flex items-center sm:flex-col sm:items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Blood Banks & Helplines</h4>
+                    <p className="text-[10px] sm:text-xs text-gray-500">24/7 hospital inventory & hotlines</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm group-hover:text-red-700 transition">Blood Banks & Helplines</h4>
-                  <p className="text-xs text-gray-500 mt-1">24/7 hospital inventory & hotlines</p>
-                </div>
+                <ArrowRight className="w-4 h-4 text-gray-400 sm:hidden" />
               </button>
             </div>
           </div>
