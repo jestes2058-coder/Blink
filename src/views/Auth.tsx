@@ -43,7 +43,6 @@ export default function Auth({ onLogin }: Props) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
 
   // Handle Sign In
   async function handleSignIn(e: React.FormEvent) {
@@ -68,7 +67,6 @@ export default function Auth({ onLogin }: Props) {
         }
 
         if (data.user) {
-          // Fetch user profile from Supabase
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
@@ -124,7 +122,6 @@ export default function Auth({ onLogin }: Props) {
 
     try {
       if (isSupabaseConfigured) {
-        // Sign up in Supabase Auth
         const { data: authData, error: authErr } = await supabase.auth.signUp({
           email: email.trim(),
           password: password,
@@ -144,7 +141,6 @@ export default function Auth({ onLogin }: Props) {
 
         const userId = authData.user?.id || 'usr-' + Math.random().toString(36).slice(2, 8)
 
-        // Save profile in Supabase table
         await supabase.from('profiles').upsert({
           id: userId,
           name: name.trim(),
@@ -155,7 +151,6 @@ export default function Auth({ onLogin }: Props) {
           is_donor: isVolunteerDonor,
         })
 
-        // If opted to register as a donor, add to donors table
         if (isVolunteerDonor) {
           await store.addDonor({
             name: name.trim(),
@@ -179,7 +174,6 @@ export default function Auth({ onLogin }: Props) {
         await store.syncFromSupabase()
         onLogin(newUser)
       } else {
-        // Local mode fallback
         const newUser = store.addUser(name.trim(), phone.trim(), email.trim())
         
         if (isVolunteerDonor) {
@@ -205,67 +199,54 @@ export default function Auth({ onLogin }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-950 via-red-900 to-red-950 text-white flex flex-col justify-between p-4 sm:p-8">
+    <div className="min-h-full w-full bg-gradient-to-br from-red-950 via-red-900 to-red-950 text-white flex flex-col justify-between p-4 sm:p-6 lg:p-8">
       {/* Top Header */}
-      <div className="max-w-4xl mx-auto w-full pt-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md">
-            <Heart className="w-6 h-6 text-white fill-white" />
+      <div className="w-full max-w-4xl mx-auto flex items-center justify-between pb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md flex-shrink-0">
+            <Heart className="w-5 h-5 text-white fill-white" />
           </div>
           <div>
-            <span className="text-2xl font-bold tracking-tight block" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            <span className="text-xl sm:text-2xl font-bold tracking-tight block leading-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
               BloodLink
             </span>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-red-200">
-              Community Transfusion Network
+            <span className="text-[9px] uppercase font-bold tracking-widest text-red-200 block">
+              Transfusion Match
             </span>
           </div>
         </div>
 
         {/* Database Status indicator */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-red-100 border border-white/10">
-          <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span>{isSupabaseConfigured ? 'Supabase Cloud Connected' : 'Local Storage Mode'}</span>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-semibold text-red-100 border border-white/10">
+          <Database className="w-3 h-3 text-emerald-400" />
+          <span className="hidden sm:inline">{isSupabaseConfigured ? 'Supabase Connected' : 'Auto Storage'}</span>
         </div>
       </div>
 
       {/* Main Container */}
-      <div className="max-w-4xl mx-auto w-full py-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-        {/* Left Side Value Props */}
-        <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-800/80 border border-red-400/30 text-xs font-semibold text-red-100">
-            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-            <span>Secure Cloud Blood Donor Management</span>
+      <div className="w-full max-w-4xl mx-auto my-auto py-4 flex flex-col items-center justify-center">
+        {/* Mobile Header Intro */}
+        <div className="text-center mb-6 max-w-md mx-auto">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-800/80 border border-red-400/30 text-[11px] font-semibold text-red-100 mb-2">
+            <Sparkles className="w-3 h-3 text-yellow-300" />
+            <span>Emergency Blood Matching</span>
           </div>
-
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
-            Save lives in your community with complete privacy.
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            Save lives with complete privacy.
           </h1>
-
-          <p className="text-red-100 text-sm sm:text-base leading-relaxed">
-            Directly connect blood recipients with nearby verified donors in critical medical emergencies without sharing your contact details publicly.
+          <p className="text-xs text-red-100 mt-1 max-w-xs mx-auto">
+            Connect patients with local verified donors in urgent hospital emergencies.
           </p>
-
-          <div className="space-y-3 pt-2 text-xs">
-            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-              <ShieldCheck className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-              <span>Contact phone numbers stay confidential until you choose to accept a match request.</span>
-            </div>
-            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-              <Droplet className="w-5 h-5 text-yellow-300 flex-shrink-0" />
-              <span>Automatic blood group compatibility & 90-day medical interval tracking.</span>
-            </div>
-          </div>
         </div>
 
-        {/* Right Side: Auth Card (Sign In / Sign Up) */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 text-gray-900 shadow-2xl border border-red-100">
+        {/* Auth Card */}
+        <div className="w-full max-w-md bg-white rounded-3xl p-5 sm:p-7 text-gray-900 shadow-2xl border border-red-100">
           {/* Tabs */}
-          <div className="flex rounded-2xl bg-gray-100 p-1 mb-6">
+          <div className="flex rounded-2xl bg-gray-100 p-1 mb-5">
             <button
               type="button"
               onClick={() => { setTab('signin'); setError('') }}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition ${
+              className={`flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition ${
                 tab === 'signin'
                   ? 'bg-white text-red-800 shadow-sm'
                   : 'text-gray-500 hover:text-gray-800'
@@ -276,7 +257,7 @@ export default function Auth({ onLogin }: Props) {
             <button
               type="button"
               onClick={() => { setTab('signup'); setError('') }}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition ${
+              className={`flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition ${
                 tab === 'signup'
                   ? 'bg-white text-red-800 shadow-sm'
                   : 'text-gray-500 hover:text-gray-800'
@@ -287,16 +268,16 @@ export default function Auth({ onLogin }: Props) {
           </div>
 
           {error && (
-            <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" /> {error}
             </div>
           )}
 
           {/* SIGN IN FORM */}
           {tab === 'signin' && (
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleSignIn} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
                   Email Address or Phone
                 </label>
                 <div className="relative">
@@ -307,13 +288,13 @@ export default function Auth({ onLogin }: Props) {
                     onChange={(e) => setSignInEmail(e.target.value)}
                     placeholder="name@example.com or +1-555-0100"
                     required
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
                   Password
                 </label>
                 <div className="relative">
@@ -324,12 +305,12 @@ export default function Auth({ onLogin }: Props) {
                     onChange={(e) => setSignInPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
+                    className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -339,14 +320,14 @@ export default function Auth({ onLogin }: Props) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <div className="text-center pt-2">
-                <span className="text-xs text-gray-500">
+                <span className="text-[11px] text-gray-500">
                   Don't have an account?{' '}
                   <button
                     type="button"
@@ -362,9 +343,9 @@ export default function Auth({ onLogin }: Props) {
 
           {/* SIGN UP FORM */}
           {tab === 'signup' && (
-            <form onSubmit={handleSignUp} className="space-y-4">
+            <form onSubmit={handleSignUp} className="space-y-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
                   Full Name *
                 </label>
                 <div className="relative">
@@ -375,50 +356,48 @@ export default function Auth({ onLogin }: Props) {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Priya Sharma"
                     required
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
-                    Email Address *
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="priya@example.com"
-                      required
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
-                    Phone Number *
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+1-555-0100"
-                      required
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
-                    />
-                  </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Email Address *
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="priya@example.com"
+                    required
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
-                  Create Password *
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Phone Number *
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1-555-0100"
+                    required
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                  Password *
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -426,14 +405,14 @@ export default function Auth({ onLogin }: Props) {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 6 characters"
+                    placeholder="Min 6 characters"
                     required
-                    className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
+                    className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -441,8 +420,8 @@ export default function Auth({ onLogin }: Props) {
               </div>
 
               {/* Option to register as volunteer donor directly */}
-              <div className="p-3.5 rounded-2xl bg-red-50/60 border border-red-100 space-y-3">
-                <label className="flex items-center gap-2.5 cursor-pointer">
+              <div className="p-3 rounded-2xl bg-red-50/60 border border-red-100 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isVolunteerDonor}
@@ -450,14 +429,14 @@ export default function Auth({ onLogin }: Props) {
                     className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
                   />
                   <span className="text-xs font-bold text-gray-800">
-                    I also want to volunteer as a Blood Donor
+                    Register me as a Volunteer Donor
                   </span>
                 </label>
 
                 {isVolunteerDonor && (
-                  <div className="grid grid-cols-2 gap-3 pt-1 text-xs">
+                  <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
                     <div>
-                      <span className="text-gray-500 font-semibold block mb-1">Blood Group</span>
+                      <span className="text-gray-500 text-[10px] font-semibold block mb-0.5">Blood Type</span>
                       <select
                         value={bloodGroup}
                         onChange={(e) => setBloodGroup(e.target.value as BloodGroup)}
@@ -470,7 +449,7 @@ export default function Auth({ onLogin }: Props) {
                     </div>
 
                     <div>
-                      <span className="text-gray-500 font-semibold block mb-1">District</span>
+                      <span className="text-gray-500 text-[10px] font-semibold block mb-0.5">District</span>
                       <select
                         value={district}
                         onChange={(e) => setDistrict(e.target.value)}
@@ -488,14 +467,14 @@ export default function Auth({ onLogin }: Props) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
               >
-                {loading ? 'Creating account...' : 'Create Account & Continue'}
+                {loading ? 'Creating account...' : 'Create Account'}
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <div className="text-center pt-2">
-                <span className="text-xs text-gray-500">
+              <div className="text-center pt-1">
+                <span className="text-[11px] text-gray-500">
                   Already have an account?{' '}
                   <button
                     type="button"
@@ -512,8 +491,8 @@ export default function Auth({ onLogin }: Props) {
       </div>
 
       {/* Footer */}
-      <div className="max-w-4xl mx-auto w-full text-center text-xs text-red-200/80 pt-4 border-t border-white/10">
-        BloodLink Community Transfusion Network · Verified Supabase Cloud Storage
+      <div className="w-full max-w-4xl mx-auto text-center text-[11px] text-red-200/80 pt-3 border-t border-white/10">
+        BloodLink Community Transfusion Network
       </div>
     </div>
   )
