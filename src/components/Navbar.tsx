@@ -188,7 +188,8 @@ export default function Navbar({
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-xs text-gray-900 truncate">{user.name}</p>
-                <p className="text-[10px] text-gray-500 truncate">{user.email || user.phone}</p>
+                <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+                <p className="text-[10px] font-semibold text-red-700 truncate">📞 {user.phone || 'No phone set'}</p>
               </div>
             </div>
             <button
@@ -236,7 +237,7 @@ export default function Navbar({
               }}
               className="flex-1 py-2 rounded-xl bg-red-50 text-red-800 text-xs font-bold text-center border border-red-200 hover:bg-red-100"
             >
-              {myProfile ? 'Update Donor Profile' : 'Register as Volunteer'}
+              {myProfile ? 'Edit Phone / Donor Profile' : 'Add Phone & Join Donors'}
             </button>
           </div>
         </div>

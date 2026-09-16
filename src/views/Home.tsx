@@ -201,22 +201,33 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
               )}
 
               {/* Donor Badges & Details Bar */}
-              <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
                   {donorBadge && (
                     <span className="text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-xl" style={{ backgroundColor: donorBadge.bgLight, color: donorBadge.color }}>
                       ★ {donorBadge.title} ({myDonorProfile.totalDonations})
                     </span>
                   )}
-                  <span className="text-[11px] text-gray-500">{myDonorProfile.district}</span>
+                  <span className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-gray-400" /> {user.phone || 'No phone set'}
+                  </span>
+                  <span className="text-[11px] text-gray-400">· {myDonorProfile.district}</span>
                 </div>
 
-                <button
-                  onClick={() => setShowDonorCardModal(true)}
-                  className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1"
-                >
-                  View ID Card →
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setView('register-donor')}
+                    className="text-[11px] font-bold text-gray-600 hover:text-red-700 underline"
+                  >
+                    Edit Phone / Info
+                  </button>
+                  <button
+                    onClick={() => setShowDonorCardModal(true)}
+                    className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1"
+                  >
+                    ID Card →
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -228,7 +239,7 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                 <div>
                   <h3 className="font-bold text-gray-900 text-sm sm:text-base">Join Volunteer Blood Donors</h3>
                   <p className="text-[11px] text-gray-600 mt-0.5">
-                    Help your local community in emergencies. Contact details stay 100% private.
+                    Phone: <strong className="text-gray-900">{user.phone || 'Not added yet'}</strong>. Register your blood group to receive emergency matches.
                   </p>
                 </div>
               </div>
@@ -236,7 +247,7 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                 onClick={() => setView('register-donor')}
                 className="w-full sm:w-auto px-4 py-2.5 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-xl shadow-md transition whitespace-nowrap"
               >
-                Register as Donor
+                Set Phone & Register
               </button>
             </div>
           )}

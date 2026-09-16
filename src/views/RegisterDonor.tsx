@@ -4,6 +4,7 @@ import {
   MapPin,
   Phone,
   Mail,
+  User,
   Calendar,
   Info,
   ShieldCheck,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react'
 import type { BloodGroup, CurrentUser, View } from '../types'
 import { BLOOD_GROUPS, DISTRICTS, store, getDonorBadge } from '../store'
+import { supabase, isSupabaseConfigured } from '../supabase'
 import BloodBadge from '../components/BloodBadge'
 
 interface Props {
@@ -24,44 +26,86 @@ interface Props {
 }
 
 export default function RegisterDonor({ user, setView, onRegistered, onToast, isSimulator = false }: Props) {
-  const existing = store.getDonors().find(d => d.phone === user.phone || d.id === user.id)
+  const existing = store.getDonors().find(d => d.phone === user.phone || d.id === user.id || (user.email && d.email === user.email))
+  
+  const [name, setName] = useState(existing?.name ?? user.name ?? '')
+  const [phone, setPhone] = useState(existing?.phone ?? (user.phone && user.phone !== '+1-555-0100' ? user.phone : ''))
+  const [email, setEmail] = useState(existing?.email ?? (user.email ?? ''))
   const [bloodGroup, setBloodGroup] = useState<BloodGroup>(existing?.bloodGroup ?? 'O+')
   const [district, setDistrict] = useState(existing?.district ?? 'Central District')
-  const [email, setEmail] = useState(existing?.email ?? (user.email ?? ''))
   const [lastDonation, setLastDonation] = useState(existing?.lastDonation ? existing.lastDonation.slice(0, 10) : '')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const badge = existing ? getDonorBadge(existing.totalDonations) : null
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!name.trim()) return setError('Please enter your full name.')
+    if (!phone.trim() || phone.replace(/\D/g, '').length < 7) {
+      return setError('Please enter a valid phone number (minimum 7 digits).')
+    }
     if (!district) return setError('Please select your residential or work district.')
     setError('')
+    setSaving(true)
 
-    const donorData = {
-      name: user.name,
-      bloodGroup,
-      district,
-      phone: user.phone,
-      email: email.trim() || `${user.name.toLowerCase().replace(/\s+/g, '')}@example.com`,
-      lastDonation: lastDonation ? new Date(lastDonation).toISOString() : null,
-      available: true,
+    try {
+      // 1. Update Current User in local store
+      const updatedUser: CurrentUser = {
+        ...user,
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim() || user.email,
+      }
+      store.setCurrentUser(updatedUser)
+
+      // 2. Add or Update Donor Record
+      const donorData = {
+        name: name.trim(),
+        bloodGroup,
+        district,
+        phone: phone.trim(),
+        email: email.trim() || `${name.trim().toLowerCase().replace(/\s+/g, '')}@example.com`,
+        lastDonation: lastDonation ? new Date(lastDonation).toISOString() : null,
+        available: true,
+      }
+
+      if (existing) {
+        await store.updateDonor({ ...existing, ...donorData })
+        onToast('success', 'Profile Updated', 'Your phone number and donor details have been saved.')
+      } else {
+        await store.addDonor(donorData)
+        onToast('success', 'Welcome Donor!', 'You are now registered in the emergency donor network!')
+      }
+
+      // 3. Sync to Supabase cloud if connected
+      if (isSupabaseConfigured) {
+        try {
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            name: name.trim(),
+            phone: phone.trim(),
+            email: email.trim() || user.email,
+            blood_group: bloodGroup,
+            district,
+            is_donor: true,
+          })
+        } catch (dbErr) {
+          console.warn('Supabase profile sync warning:', dbErr)
+        }
+      }
+
+      setSaved(true)
+      setTimeout(() => {
+        onRegistered()
+        setView('home')
+      }, 1000)
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save profile. Please try again.')
+    } finally {
+      setSaving(false)
     }
-
-    if (existing) {
-      store.updateDonor({ ...existing, ...donorData })
-      onToast('success', 'Profile Updated', 'Your donor profile and eligibility details have been updated.')
-    } else {
-      store.addDonor(donorData)
-      onToast('success', 'Welcome Donor!', 'You are now part of the emergency blood donor community!')
-    }
-
-    setSaved(true)
-    setTimeout(() => {
-      onRegistered()
-      setView('home')
-    }, 1200)
   }
 
   if (saved) {
@@ -78,10 +122,10 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast, is
         </p>
         <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 text-left">
           <p className="font-bold flex items-center gap-1.5 mb-1">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" /> Privacy Protected
+            <ShieldCheck className="w-4 h-4 text-emerald-600" /> Phone & Privacy Protected
           </p>
           <p>
-            Your contact details remain confidential and are only shared when you accept an emergency blood match.
+            Your phone number <strong>{phone}</strong> is verified and will only be shared when you accept an emergency blood match.
           </p>
         </div>
       </div>
@@ -97,14 +141,14 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast, is
             <Heart className="w-4 h-4 text-red-200 fill-red-200" />
           </span>
           <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-200">
-            Donor Registry
+            Donor Registry & Profile
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1" style={{ fontFamily: "'DM Serif Display', serif" }}>
-          {existing ? 'Update Volunteer Profile' : 'Register as Blood Donor'}
+          {existing ? 'Edit Profile & Donor Details' : 'Register as Blood Donor'}
         </h1>
         <p className="text-red-100 text-xs sm:text-sm">
-          Join our district lifesaving network. Only receive alerts that match your medical compatibility.
+          Update your phone number, location, and blood group to ensure emergency alerts reach you.
         </p>
       </div>
 
@@ -128,6 +172,62 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast, is
           </div>
         )}
 
+        {/* Full Name */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+            Full Name *
+          </label>
+          <div className="relative">
+            <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Maya Krishnan"
+              required
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+            />
+          </div>
+        </div>
+
+        {/* Phone Number (Editable) */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+            Phone Number * (Used for Emergency Match Alerts)
+          </label>
+          <div className="relative">
+            <Phone className="w-4 h-4 text-red-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. +91 98765 43210 or +1-555-0199"
+              required
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+            />
+          </div>
+          <p className="text-[11px] text-gray-500 mt-1">
+            🔒 Kept 100% private. Only shared with a requestor when you tap "Accept".
+          </p>
+        </div>
+
+        {/* Email Address */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+            Email Address
+          </label>
+          <div className="relative">
+            <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+            />
+          </div>
+        </div>
+
         {/* Blood Group */}
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
@@ -141,7 +241,7 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast, is
                   key={g}
                   type="button"
                   onClick={() => setBloodGroup(g)}
-                  className={`py-3 rounded-2xl font-black text-sm transition-all flex flex-col items-center justify-center border-2 ${
+                  className={`py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col items-center justify-center border-2 ${
                     isSelected
                       ? 'bg-red-700 border-red-700 text-white shadow-md shadow-red-200 scale-105'
                       : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
@@ -156,7 +256,7 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast, is
 
         {/* District */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
             Your Primary District *
           </label>
           <div className="relative">
@@ -164,7 +264,7 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast, is
             <select
               value={district}
               onChange={(e) => setDistrict(e.target.value)}
-              className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
             >
               {DISTRICTS.map((d) => (
                 <option key={d} value={d}>{d}</option>
@@ -173,25 +273,9 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast, is
           </div>
         </div>
 
-        {/* Phone (read only from active user) */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-            Verified Phone Number (Kept Confidential)
-          </label>
-          <div className="relative">
-            <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={user.phone}
-              readOnly
-              className="w-full pl-10 pr-4 py-3.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm text-gray-600 cursor-not-allowed"
-            />
-          </div>
-        </div>
-
         {/* Last Donation Date */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
             Last Blood Donation Date (If any)
           </label>
           <div className="relative">
@@ -201,30 +285,31 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast, is
               value={lastDonation}
               onChange={(e) => setLastDonation(e.target.value)}
               max={new Date().toISOString().slice(0, 10)}
-              className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
             />
           </div>
-          <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
+          <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
             <Info className="w-3.5 h-3.5 text-red-500" /> A 90-day cooldown interval is medically maintained to protect donor stamina.
           </p>
         </div>
 
         {/* Privacy Note */}
-        <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 text-xs text-blue-900 space-y-1">
+        <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 text-xs text-blue-900 space-y-1">
           <p className="font-bold flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-blue-600" /> 100% Privacy & Spam Prevention
           </p>
-          <p>
+          <p className="text-[11px] sm:text-xs">
             Your phone number is NEVER published publicly. You will receive notification alerts when local requests arise, and you choose when to accept and reveal your contact.
           </p>
         </div>
 
         <button
           type="submit"
-          className="w-full py-4 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-sm sm:text-base transition shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+          disabled={saving}
+          className="w-full py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-xs sm:text-sm transition shadow-lg shadow-red-200 flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <Heart className="w-5 h-5 fill-white" />
-          <span>{existing ? 'Save & Update Profile' : 'Complete Volunteer Registration'}</span>
+          <Heart className="w-4 h-4 fill-white" />
+          <span>{saving ? 'Saving...' : existing ? 'Save & Update Profile' : 'Complete Volunteer Registration'}</span>
         </button>
       </form>
     </div>
