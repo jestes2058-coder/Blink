@@ -106,60 +106,16 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 }
 
-// Default initial blood banks
-export const SEED_BLOOD_BANKS: BloodBank[] = [
-  {
-    id: 'bb-1',
-    name: 'Central Red Cross Blood Center',
-    district: 'Central District',
-    address: '450 Healthcare Ave, Medical Enclave',
-    phone: '+1-555-8001',
-    timing: 'Open 24/7 (Emergency Service)',
-    isEmergency24x7: true,
-    availableStock: { 'O+': 'moderate', 'O-': 'critical', 'A+': 'high', 'A-': 'moderate', 'B+': 'high', 'B-': 'low', 'AB+': 'high', 'AB-': 'low' },
-  },
-  {
-    id: 'bb-2',
-    name: 'North General Hospital Blood Bank',
-    district: 'North District',
-    address: '12 Hospital Way, North Valley',
-    phone: '+1-555-8002',
-    timing: 'Open 24/7',
-    isEmergency24x7: true,
-    availableStock: { 'O+': 'high', 'O-': 'low', 'A+': 'moderate', 'A-': 'critical', 'B+': 'moderate', 'B-': 'moderate', 'AB+': 'high', 'AB-': 'moderate' },
-  },
-  {
-    id: 'bb-3',
-    name: 'South District Rotary Blood Care',
-    district: 'South District',
-    address: '89 Civic Center Blvd, Southside',
-    phone: '+1-555-8003',
-    timing: '8:00 AM – 10:00 PM',
-    isEmergency24x7: false,
-    availableStock: { 'O+': 'moderate', 'O-': 'moderate', 'A+': 'high', 'A-': 'high', 'B+': 'critical', 'B-': 'low', 'AB+': 'moderate', 'AB-': 'critical' },
-  },
-  {
-    id: 'bb-4',
-    name: 'Riverside Community Blood Foundation',
-    district: 'Riverside',
-    address: '304 Riverfront Road',
-    phone: '+1-555-8004',
-    timing: 'Open 24/7',
-    isEmergency24x7: true,
-    availableStock: { 'O+': 'high', 'O-': 'low', 'A+': 'high', 'A-': 'moderate', 'B+': 'high', 'B-': 'low', 'AB+': 'moderate', 'AB-': 'low' },
-  },
-]
-
-// Store with Supabase Cloud Sync + Local Optimistic Cache
+// Store with Supabase Cloud Sync + Clean Local Storage
 export const store = {
   // Sync all data from Supabase
   async syncFromSupabase() {
     if (!isSupabaseConfigured) return
 
     try {
-      // Sync Donors
+      // Sync Real Donors from Supabase
       const { data: donorsData, error: donorsErr } = await supabase.from('donors').select('*')
-      if (!donorsErr && donorsData && donorsData.length > 0) {
+      if (!donorsErr && donorsData) {
         const mappedDonors: Donor[] = donorsData.map(d => ({
           id: d.id,
           name: d.name,
@@ -175,7 +131,7 @@ export const store = {
         this.setDonors(mappedDonors)
       }
 
-      // Sync Requests
+      // Sync Real Requests from Supabase
       const { data: reqData, error: reqErr } = await supabase.from('blood_requests').select('*')
       if (!reqErr && reqData) {
         const mappedReq: BloodRequest[] = reqData.map(r => ({
@@ -406,24 +362,21 @@ export const store = {
     return user
   },
 
-  getBloodBanks(): BloodBank[] {
-    return SEED_BLOOD_BANKS
-  },
+  clearAllData() {
+    localStorage.removeItem('bd_donors')
+    localStorage.removeItem('bd_requests')
+    localStorage.removeItem('bd_users')
+    localStorage.removeItem('bd_current_user')
+  }
 }
 
-// Initial seed if local data is clean
+// Clean initialization - No dummy examples!
 export function seedIfEmpty() {
-  if (store.getDonors().length > 0) return
-
-  const now = new Date()
-  const daysAgo = (n: number) => new Date(now.getTime() - n * 86400000).toISOString()
-
-  const donors: Donor[] = [
-    { id: 'donor-1', name: 'Aarav Sharma', bloodGroup: 'O+', district: 'Central District', phone: '+1-555-0101', email: 'aarav@example.com', lastDonation: daysAgo(120), registeredAt: daysAgo(400), totalDonations: 4, available: true },
-    { id: 'donor-2', name: 'Priya Nair', bloodGroup: 'A-', district: 'North District', phone: '+1-555-0102', email: 'priya@example.com', lastDonation: daysAgo(95), registeredAt: daysAgo(300), totalDonations: 3, available: true },
-    { id: 'donor-3', name: 'Rahul Mehta', bloodGroup: 'B+', district: 'East District', phone: '+1-555-0103', email: 'rahul@example.com', lastDonation: daysAgo(30), registeredAt: daysAgo(200), totalDonations: 2, available: false },
-    { id: 'donor-4', name: 'Vikram Singh', bloodGroup: 'O-', district: 'South District', phone: '+1-555-0105', email: 'vikram@example.com', lastDonation: daysAgo(200), registeredAt: daysAgo(500), totalDonations: 8, available: true },
-    { id: 'donor-5', name: 'Elena Rostova', bloodGroup: 'AB+', district: 'Central District', phone: '+1-555-0109', email: 'elena@example.com', lastDonation: daysAgo(140), registeredAt: daysAgo(220), totalDonations: 5, available: true },
-  ]
-  store.setDonors(donors)
+  // Clear any old legacy mock/dummy entries from previous sessions
+  const donors = store.getDonors()
+  if (donors.some(d => d.id.startsWith('seed') || d.id.startsWith('donor-'))) {
+    localStorage.removeItem('bd_donors')
+    localStorage.removeItem('bd_requests')
+    localStorage.removeItem('bd_users')
+  }
 }

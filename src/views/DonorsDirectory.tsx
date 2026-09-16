@@ -53,7 +53,7 @@ export default function DonorsDirectory({ user, setView }: Props) {
       <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl mb-8 relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
           <div className="flex items-center gap-2 mb-2">
-            <span className="p-1.5 rounded-xl bg-white/20 backdrop-blur-sm">
+            <span className="p-1.5 rounded-xl bg-white/20 backdrop-blur-md">
               <Users className="w-5 h-5 text-red-200" />
             </span>
             <span className="text-xs font-bold uppercase tracking-widest text-red-200">
@@ -166,20 +166,15 @@ export default function DonorsDirectory({ user, setView }: Props) {
       {filteredDonors.length === 0 ? (
         <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center max-w-md mx-auto shadow-sm">
           <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-gray-800 mb-1">No donors matched filters</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-1">No Donors Registered Yet</h3>
           <p className="text-xs text-gray-500 mb-5">
-            Try resetting your filters or submit a general blood request to reach donors in adjacent districts.
+            Be the first volunteer blood donor in your district to help save lives!
           </p>
           <button
-            onClick={() => {
-              setSearchQuery('')
-              setSelectedBloodGroup('ALL')
-              setSelectedDistrict('ALL')
-              setFilterEligibleOnly(false)
-            }}
-            className="px-5 py-2.5 bg-red-700 text-white text-xs font-semibold rounded-xl"
+            onClick={() => setView('register-donor')}
+            className="px-5 py-2.5 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-xl transition shadow-md"
           >
-            Reset All Filters
+            Register as Volunteer Donor
           </button>
         </div>
       ) : (
