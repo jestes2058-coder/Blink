@@ -11,7 +11,7 @@ import {
   CheckCircle,
 } from 'lucide-react'
 import type { CurrentUser, ToastMessage, View } from './types'
-import { store, seedIfEmpty } from './store'
+import { store, seedIfEmpty, COMPATIBLE_DONORS } from './store'
 import Auth from './views/Auth'
 import Home from './views/Home'
 import RegisterDonor from './views/RegisterDonor'
@@ -138,8 +138,18 @@ export default function App() {
   const donors = store.getDonors()
   const requests = store.getRequests()
   const myProfile = donors.find(d => d.phone === user.phone || d.id === user.id || (user.email && d.email === user.email))
+  
+  // Real-time pending notification count for active donor
   const pendingCount = myProfile
-    ? requests.filter(r => r.matches.some(m => m.donorId === myProfile.id && m.status === 'pending')).length
+    ? requests.filter(r => {
+        const match = r.matches.find(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
+        if (match) return match.status === 'pending'
+        if (r.status === 'open' && r.district === myProfile.district) {
+          const compatible = COMPATIBLE_DONORS[r.bloodGroup] || []
+          return compatible.includes(myProfile.bloodGroup) && r.requestorPhone !== myProfile.phone
+        }
+        return false
+      }).length
     : 0
 
   // Mobile Bottom Navigation Items
@@ -268,17 +278,6 @@ export default function App() {
           onSuccess={() => {
             addToast('warning', '🚨 Urgent SOS Broadcasted', 'All eligible donors in district have been alerted with emergency priority!')
             setView('my-requests')
-          }}
-        />
-      )}
-
-      {/* Supabase & Cloud DB Config Modal */}
-      {showDBModal && (
-        <SupabaseConfigModal
-          onClose={() => setShowDBModal(false)}
-          onSaved={() => {
-            addToast('success', 'Cloud Synced', 'Connected to Supabase database.')
-            refresh()
           }}
         />
       )}

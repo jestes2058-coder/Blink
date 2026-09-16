@@ -80,11 +80,9 @@ export function nextEligibleDate(donor: Donor): Date | null {
 export function findEligibleDonors(request: Partial<BloodRequest>, donors: Donor[]): Donor[] {
   if (!request.bloodGroup || !request.district) return []
   const compatible = COMPATIBLE_DONORS[request.bloodGroup] || []
-  const alreadyMatched = new Set((request.matches || []).map(m => m.donorId))
   return donors.filter(d =>
     d.district === request.district &&
     compatible.includes(d.bloodGroup) &&
-    !alreadyMatched.has(d.id) &&
     d.id !== request.requestorId &&
     d.phone !== request.requestorPhone &&
     canDonate(d),
@@ -106,7 +104,71 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 }
 
-// Store with Supabase Cloud Sync + Clean Local Storage
+// Default hospital blood banks
+export const SEED_BLOOD_BANKS: BloodBank[] = [
+  {
+    id: 'bb-1',
+    name: 'Central Red Cross Blood Center',
+    district: 'Central District',
+    address: '450 Healthcare Ave, Medical Enclave',
+    phone: '+1-555-8001',
+    timing: 'Open 24/7 (Emergency Service)',
+    isEmergency24x7: true,
+    availableStock: { 'O+': 'moderate', 'O-': 'critical', 'A+': 'high', 'A-': 'moderate', 'B+': 'high', 'B-': 'low', 'AB+': 'high', 'AB-': 'low' },
+  },
+  {
+    id: 'bb-2',
+    name: 'North General Hospital Blood Bank',
+    district: 'North District',
+    address: '12 Hospital Way, North Valley',
+    phone: '+1-555-8002',
+    timing: 'Open 24/7',
+    isEmergency24x7: true,
+    availableStock: { 'O+': 'high', 'O-': 'low', 'A+': 'moderate', 'A-': 'critical', 'B+': 'moderate', 'B-': 'moderate', 'AB+': 'high', 'AB-': 'moderate' },
+  },
+  {
+    id: 'bb-3',
+    name: 'South District Rotary Blood Care',
+    district: 'South District',
+    address: '89 Civic Center Blvd, Southside',
+    phone: '+1-555-8003',
+    timing: '8:00 AM – 10:00 PM',
+    isEmergency24x7: false,
+    availableStock: { 'O+': 'moderate', 'O-': 'moderate', 'A+': 'high', 'A-': 'high', 'B+': 'critical', 'B-': 'low', 'AB+': 'moderate', 'AB-': 'critical' },
+  },
+  {
+    id: 'bb-4',
+    name: 'Riverside Community Blood Foundation',
+    district: 'Riverside',
+    address: '304 Riverfront Road',
+    phone: '+1-555-8004',
+    timing: 'Open 24/7',
+    isEmergency24x7: true,
+    availableStock: { 'O+': 'high', 'O-': 'low', 'A+': 'high', 'A-': 'moderate', 'B+': 'high', 'B-': 'low', 'AB+': 'moderate', 'AB-': 'low' },
+  },
+]
+
+// Play sound helper for emergency notifications
+export function playNotificationSound() {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const osc = audioCtx.createOscillator()
+    const gain = audioCtx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime) // D5
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15) // A5
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4)
+    osc.connect(gain)
+    gain.connect(audioCtx.destination)
+    osc.start()
+    osc.stop(audioCtx.currentTime + 0.4)
+  } catch {
+    // Silent fallback
+  }
+}
+
+// Store with Real-Time Matching & Supabase Cloud Sync
 export const store = {
   // Sync all data from Supabase
   async syncFromSupabase() {
@@ -210,6 +272,33 @@ export const store = {
       }
     }
 
+    // Auto-match this newly registered donor to any existing open requests in their district!
+    const requests = this.getRequests()
+    let updatedRequests = false
+    requests.forEach(req => {
+      if (req.status === 'open' && req.district === donor.district) {
+        const compatible = COMPATIBLE_DONORS[req.bloodGroup] || []
+        if (compatible.includes(donor.bloodGroup)) {
+          const alreadyMatched = req.matches.some(m => m.donorId === donor.id || m.donorName === donor.name)
+          if (!alreadyMatched) {
+            req.matches.push({
+              donorId: donor.id,
+              donorName: donor.name,
+              donorBloodGroup: donor.bloodGroup,
+              donorDistrict: donor.district,
+              status: 'pending',
+              notifiedAt: new Date().toISOString(),
+            })
+            updatedRequests = true
+          }
+        }
+      }
+    })
+
+    if (updatedRequests) {
+      this.setRequests(requests)
+    }
+
     return donor
   },
 
@@ -259,13 +348,16 @@ export const store = {
       matches: [],
     }
 
-    // Auto-match eligible district donors
+    // Auto-match all eligible district donors
     const donors = this.getDonors()
     const eligible = findEligibleDonors(req, donors)
     req.matches = createMatches(eligible, now)
 
     requests.push(req)
     this.setRequests(requests)
+
+    // Trigger audio/push notification for donors
+    playNotificationSound()
 
     if (isSupabaseConfigured) {
       try {
@@ -362,6 +454,10 @@ export const store = {
     return user
   },
 
+  getBloodBanks(): BloodBank[] {
+    return SEED_BLOOD_BANKS
+  },
+
   clearAllData() {
     localStorage.removeItem('bd_donors')
     localStorage.removeItem('bd_requests')
@@ -370,9 +466,8 @@ export const store = {
   }
 }
 
-// Clean initialization - No dummy examples!
+// Clean initialization
 export function seedIfEmpty() {
-  // Clear any old legacy mock/dummy entries from previous sessions
   const donors = store.getDonors()
   if (donors.some(d => d.id.startsWith('seed') || d.id.startsWith('donor-'))) {
     localStorage.removeItem('bd_donors')
