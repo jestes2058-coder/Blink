@@ -1,0 +1,30 @@
+{
+  "name": "BloodLink - Blood Donor Matching App",
+  "short_name": "BloodLink",
+  "description": "District-based emergency blood donor matching application connecting patients with verified local donors.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#7F1D1D",
+  "theme_color": "#7F1D1D",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Request Blood",
+      "url": "/?view=request-blood",
+      "description": "Quickly request emergency blood"
+    },
+    {
+      "name": "Find Donors",
+      "url": "/?view=donors-directory",
+      "description": "Browse registered volunteer donors"
+    }
+  ]
+}

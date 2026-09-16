@@ -1,0 +1,423 @@
+import { useState } from 'react'
+import {
+  AlertCircle,
+  MapPin,
+  Building2,
+  Phone,
+  FileText,
+  Heart,
+  Droplet,
+  Users,
+  ShieldCheck,
+  CheckCircle2,
+  ArrowRight,
+  Flame,
+} from 'lucide-react'
+import type { BloodGroup, Urgency, CurrentUser, View } from '../types'
+import {
+  BLOOD_GROUPS,
+  DISTRICTS,
+  store,
+  findEligibleDonors,
+  COMPATIBLE_DONORS,
+} from '../store'
+import BloodBadge from '../components/BloodBadge'
+import UrgencyBadge from '../components/UrgencyBadge'
+
+interface Props {
+  user: CurrentUser
+  setView: (v: View) => void
+  onToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
+}
+
+export default function RequestBlood({ user, setView, onToast }: Props) {
+  const [step, setStep] = useState<'form' | 'preview' | 'done'>('form')
+  const [patientName, setPatientName] = useState('')
+  const [bloodGroup, setBloodGroup] = useState<BloodGroup>('O+')
+  const [district, setDistrict] = useState('Central District')
+  const [urgency, setUrgency] = useState<Urgency>('urgent')
+  const [hospital, setHospital] = useState('')
+  const [unitsNeeded, setUnitsNeeded] = useState(1)
+  const [notes, setNotes] = useState('')
+  const [error, setError] = useState('')
+  const [matchCount, setMatchCount] = useState(0)
+
+  const donors = store.getDonors()
+  const compatibleTypes = COMPATIBLE_DONORS[bloodGroup] || []
+
+  // Calculate live available donors in the selected district
+  const currentEligible = findEligibleDonors(
+    {
+      requestorId: user.id,
+      requestorPhone: user.phone,
+      bloodGroup,
+      district,
+    },
+    donors,
+  )
+
+  const urgencies: { val: Urgency; label: string; desc: string }[] = [
+    { val: 'critical', label: 'Critical / Emergency', desc: 'Needed within 1–4 hours (Trauma/Surgery)' },
+    { val: 'urgent', label: 'Urgent', desc: 'Needed within 24 hours' },
+    { val: 'planned', label: 'Planned / Scheduled', desc: 'Scheduled within next 7 days' },
+  ]
+
+  function handlePreview(e: React.FormEvent) {
+    e.preventDefault()
+    if (!patientName.trim()) return setError('Patient name is required.')
+    if (!district) return setError('Please select the patient hospital district.')
+    if (!hospital.trim()) return setError('Hospital or medical clinic name is required.')
+    setError('')
+
+    setMatchCount(currentEligible.length)
+    setStep('preview')
+  }
+
+  function handleSubmit() {
+    const newReq = store.addRequest({
+      requestorId: user.id,
+      requestorName: user.name,
+      requestorPhone: user.phone,
+      patientName: patientName.trim(),
+      bloodGroup,
+      district,
+      urgency,
+      hospital: hospital.trim(),
+      unitsNeeded,
+      notes: notes.trim(),
+    })
+
+    const count = newReq.matches.length
+    if (count > 0) {
+      onToast('success', 'Request Broadcasted', `Notified ${count} eligible donor${count > 1 ? 's' : ''} in ${district}.`)
+    } else {
+      onToast('info', 'Request Saved', 'Request recorded. Donors will match as soon as volunteers become available.')
+    }
+
+    setStep('done')
+  }
+
+  if (step === 'done') {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+          <Droplet className="w-10 h-10 text-red-600 fill-red-600 animate-pulse" />
+        </div>
+        <h2 className="text-3xl font-bold text-gray-900 mb-3" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          Blood Request Broadcasted!
+        </h2>
+        <p className="text-gray-600 text-sm mb-4 max-w-md mx-auto">
+          {matchCount > 0
+            ? `${matchCount} eligible verified donor${matchCount > 1 ? 's have' : ' has'} been alerted immediately via private notification.`
+            : `Your request has been filed for ${district}. Donors in this district will be alerted as they enter eligibility.`}
+        </p>
+
+        <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-800 text-left max-w-md mx-auto mb-8 space-y-1">
+          <p className="font-bold flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-blue-600" /> Privacy & Contact Sharing
+          </p>
+          <p>
+            Your phone number ({user.phone}) and patient details will only be revealed to donors after they click <strong>Accept</strong> in their alerts.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-3">
+          <button
+            onClick={() => setView('my-requests')}
+            className="px-6 py-3.5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-2xl shadow-lg shadow-red-200 transition"
+          >
+            Track in My Requests
+          </button>
+          <button
+            onClick={() => setView('home')}
+            className="px-6 py-3.5 border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold rounded-2xl transition"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'preview') {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="bg-gradient-to-r from-red-900 to-rose-900 rounded-3xl p-6 text-white shadow-xl mb-6">
+          <button
+            onClick={() => setStep('form')}
+            className="text-red-200 hover:text-white text-xs font-bold mb-3 flex items-center gap-1"
+          >
+            ← Back to Edit
+          </button>
+          <h1 className="text-2xl sm:text-3xl font-bold" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            Confirm & Broadcast Request
+          </h1>
+          <p className="text-red-100 text-xs mt-1">Review patient details and matching reach before submitting</p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-red-100 shadow-sm p-6 sm:p-8 space-y-6">
+          {/* Summary Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Patient</p>
+              <h3 className="text-xl font-bold text-gray-900">{patientName}</h3>
+            </div>
+            <UrgencyBadge urgency={urgency} />
+          </div>
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div className="bg-gray-50 p-4 rounded-2xl">
+              <p className="text-gray-400 font-semibold mb-1">Blood Group Needed</p>
+              <BloodBadge group={bloodGroup} size="lg" />
+            </div>
+            <div className="bg-gray-50 p-4 rounded-2xl">
+              <p className="text-gray-400 font-semibold mb-1">Hospital / Clinic</p>
+              <p className="text-sm font-bold text-gray-800">{hospital}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-2xl">
+              <p className="text-gray-400 font-semibold mb-1">District Location</p>
+              <p className="text-sm font-bold text-gray-800">{district}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-2xl">
+              <p className="text-gray-400 font-semibold mb-1">Units Required</p>
+              <p className="text-sm font-bold text-gray-800">{unitsNeeded} Unit{unitsNeeded > 1 ? 's' : ''}</p>
+            </div>
+          </div>
+
+          {notes && (
+            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 text-xs">
+              <p className="font-bold text-gray-700 mb-1">Special Clinical Notes:</p>
+              <p className="text-gray-600">{notes}</p>
+            </div>
+          )}
+
+          {/* Real-time Match Reach Box */}
+          <div className={`p-4 rounded-2xl border ${
+            matchCount > 0
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+              : 'bg-amber-50 border-amber-200 text-amber-950'
+          }`}>
+            <div className="flex items-center gap-2 font-bold text-sm">
+              <Users className="w-5 h-5" />
+              <span>
+                {matchCount > 0
+                  ? `${matchCount} eligible volunteer donor${matchCount > 1 ? 's' : ''} found in ${district}`
+                  : `0 eligible donors in ${district} right now`}
+              </span>
+            </div>
+            <p className="text-xs mt-1 opacity-90">
+              {matchCount > 0
+                ? 'Matched donors will receive an instant push notification on their dashboard.'
+                : 'Your request will stay active on the emergency board and match when donors become available.'}
+            </p>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            className="w-full py-4 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-sm sm:text-base transition shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+          >
+            <Droplet className="w-5 h-5 fill-white" />
+            <span>Submit Blood Request & Alert Donors</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl mb-8">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="p-1.5 rounded-xl bg-white/20">
+            <Droplet className="w-5 h-5 text-red-200 fill-red-200" />
+          </span>
+          <span className="text-xs font-bold uppercase tracking-widest text-red-200">
+            Donor Matching Engine
+          </span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          Request Blood for Patient
+        </h1>
+        <p className="text-red-100 text-xs sm:text-sm max-w-xl">
+          Broadcast your urgent blood requirement to verified volunteer donors in your specific medical district.
+        </p>
+      </div>
+
+      <form onSubmit={handlePreview} className="bg-white rounded-3xl border border-red-100 shadow-sm p-6 sm:p-8 space-y-6">
+        {error && (
+          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm font-semibold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" /> {error}
+          </div>
+        )}
+
+        {/* Patient Name */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+            Patient Full Name *
+          </label>
+          <input
+            type="text"
+            value={patientName}
+            onChange={(e) => setPatientName(e.target.value)}
+            placeholder="e.g. Maya Krishnan"
+            className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+          />
+        </div>
+
+        {/* Blood Group Required */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Required Blood Group *
+            </label>
+            <span className="text-xs text-gray-500">
+              Compatible with donors: <span className="font-bold text-red-700">{compatibleTypes.join(', ')}</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            {BLOOD_GROUPS.map((g) => {
+              const isSelected = bloodGroup === g
+              return (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setBloodGroup(g)}
+                  className={`py-3 rounded-2xl font-black text-sm transition-all flex flex-col items-center justify-center border-2 ${
+                    isSelected
+                      ? 'bg-red-700 border-red-700 text-white shadow-md shadow-red-200 scale-105'
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
+                  }`}
+                >
+                  <span>{g}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Urgency Level */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+            Urgency Level *
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {urgencies.map((u) => {
+              const isSelected = urgency === u.val
+              return (
+                <button
+                  key={u.val}
+                  type="button"
+                  onClick={() => setUrgency(u.val)}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between ${
+                    isSelected
+                      ? u.val === 'critical'
+                        ? 'bg-red-700 border-red-700 text-white shadow-md shadow-red-200'
+                        : u.val === 'urgent'
+                        ? 'bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200'
+                        : 'bg-emerald-700 border-emerald-700 text-white shadow-md'
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
+                  }`}
+                >
+                  <span className="font-bold text-sm">{u.label}</span>
+                  <span className={`text-[11px] mt-1 ${isSelected ? 'opacity-90' : 'text-gray-400'}`}>
+                    {u.desc}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* District & Hospital */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              District Location *
+            </label>
+            <div className="relative">
+              <MapPin className="w-4 h-4 text-red-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <select
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+              >
+                {DISTRICTS.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              Hospital / Clinic Name *
+            </label>
+            <div className="relative">
+              <Building2 className="w-4 h-4 text-red-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={hospital}
+                onChange={(e) => setHospital(e.target.value)}
+                placeholder="e.g. City General Hospital, ICU Ward 2"
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Units Needed & Clinical Notes */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              Units Needed
+            </label>
+            <select
+              value={unitsNeeded}
+              onChange={(e) => setUnitsNeeded(Number(e.target.value))}
+              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>{n} Unit{n > 1 ? 's' : ''}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              Special Instructions / Notes
+            </label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Surgery at 9 AM, Platelet concentrate preferred"
+              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+            />
+          </div>
+        </div>
+
+        {/* Live Reach Indicator */}
+        <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-red-900 font-semibold">
+            <Users className="w-4 h-4 text-red-600" />
+            <span>Eligible donors currently ready in {district}:</span>
+          </div>
+          <span className="text-xs font-black px-2.5 py-1 bg-white text-red-800 rounded-xl border border-red-200">
+            {currentEligible.length} Donors Found
+          </span>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full py-4 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-sm sm:text-base transition shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+        >
+          <span>Preview & Match Donors</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </form>
+    </div>
+  )
+}
