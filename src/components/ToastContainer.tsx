@@ -27,7 +27,7 @@ export default function ToastContainer({ toasts, onDismiss }: Props) {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-xl border backdrop-blur-md transition-all duration-300 transform translate-y-0 opacity-100 ${bgClass}`}
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-xl border backdrop-blur-md transition-[opacity,transform] duration-200 transform translate-y-0 opacity-100 ${bgClass}`}
             role="alert"
           >
             <div className="flex-shrink-0 mt-0.5">

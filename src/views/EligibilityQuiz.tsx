@@ -129,7 +129,7 @@ export default function EligibilityQuiz({ setView }: Props) {
             </div>
             <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-red-600 rounded-full transition-all duration-300"
+                className="h-full bg-red-600 rounded-full transition-[width] duration-300"
                 style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
               />
             </div>

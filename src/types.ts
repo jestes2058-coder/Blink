@@ -15,21 +15,29 @@ export type View =
   | 'eligibility-quiz'
   | 'blood-banks'
   | 'donor-card'
+  | 'profile'
 
 export interface CurrentUser {
   id: string
   name: string
   phone: string
   email?: string
+  avatar?: string
+  state?: string
+  district?: string
+  bloodGroup?: BloodGroup
+  isDonor?: boolean
 }
 
 export interface Donor {
   id: string
   name: string
   bloodGroup: BloodGroup
+  state?: string
   district: string
   phone: string
   email: string
+  avatar?: string
   lastDonation: string | null
   registeredAt: string
   totalDonations: number
@@ -41,6 +49,7 @@ export interface Match {
   donorName: string
   donorBloodGroup: BloodGroup
   donorDistrict?: string
+  donorAvatar?: string
   status: MatchStatus
   notifiedAt: string
   respondedAt?: string
@@ -51,8 +60,10 @@ export interface BloodRequest {
   requestorId: string
   requestorName: string
   requestorPhone: string
+  requestorAvatar?: string
   patientName: string
   bloodGroup: BloodGroup
+  state?: string
   district: string
   urgency: Urgency
   hospital: string
@@ -66,6 +77,7 @@ export interface BloodRequest {
 export interface BloodBank {
   id: string
   name: string
+  state?: string
   district: string
   address: string
   phone: string
@@ -90,3 +102,29 @@ export interface DonorBadge {
   bgLight: string
   description: string
 }
+
+export interface SentEmailAlert {
+  id: string
+  requestId: string
+  recipientEmail: string
+  recipientName: string
+  patientName: string
+  bloodGroup: BloodGroup
+  urgency: Urgency
+  hospital: string
+  district: string
+  state?: string
+  subject: string
+  htmlBody: string
+  plainText: string
+  sentAt: string
+  status: 'delivered' | 'opened' | 'simulated'
+}
+
+export interface EmailOtpRecord {
+  email: string
+  code: string
+  expiresAt: number
+  verified: boolean
+}
+

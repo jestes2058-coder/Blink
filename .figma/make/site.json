@@ -1,7 +1,7 @@
 {
   "description": "Connect eligible blood donors with nearby requests by matching blood type, location, and donation intervals while ensuring donor privacy and consent.",
   "robots": {
-    "index": false
+    "index": true
   },
   "accessibility": {
     "addBypassLinks": false,

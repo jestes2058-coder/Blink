@@ -16,6 +16,7 @@ import {
   Flame,
   Sparkles,
   Phone,
+  Edit3,
 } from 'lucide-react'
 import type { CurrentUser, View } from '../types'
 import {
@@ -29,21 +30,30 @@ import {
 import BloodBadge from '../components/BloodBadge'
 import UrgencyBadge from '../components/UrgencyBadge'
 import DonorCardModal from '../components/DonorCardModal'
+import EditProfileModal from '../components/EditProfileModal'
+import UserAvatar from '../components/UserAvatar'
 
 interface Props {
   user: CurrentUser
   setView: (v: View) => void
   onOpenSOS: () => void
-  isSimulator?: boolean
+  onUserUpdated?: (u: CurrentUser) => void
+  onToast?: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
 }
 
-export default function Home({ user, setView, onOpenSOS, isSimulator = false }: Props) {
+export default function Home({
+  user,
+  setView,
+  onOpenSOS,
+  onUserUpdated,
+  onToast = () => {},
+}: Props) {
   const [showDonorCardModal, setShowDonorCardModal] = useState(false)
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false)
 
   const donors = store.getDonors()
   const requests = store.getRequests()
   const myDonorProfile = donors.find(d => d.id === user.id || d.phone === user.phone)
-  const myRequests = requests.filter(r => r.requestorId === user.id || r.requestorPhone === user.phone)
 
   const pendingForMe = requests.filter(r =>
     r.matches.some(m => m.donorId === (myDonorProfile?.id ?? '') && m.status === 'pending'),
@@ -59,22 +69,37 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
   const donorBadge = myDonorProfile ? getDonorBadge(myDonorProfile.totalDonations) : null
 
   return (
-    <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8'} overflow-x-hidden`}>
-      {/* Hero Banner with Stats */}
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 overflow-x-hidden">
+      {/* Hero Banner with User Profile & Actions */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-950 via-red-900 to-rose-950 text-white p-5 sm:p-8 shadow-xl">
         {/* Background ambient lighting */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className={`relative z-10 flex flex-col ${!isSimulator ? 'lg:flex-row lg:items-center' : ''} justify-between gap-5`}>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="w-full max-w-xl">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-red-200 text-[11px] font-semibold mb-2.5 border border-white/10">
               <Sparkles className="w-3 h-3 text-yellow-300" />
-              <span>Transfusion & Matching Engine</span>
+              <span>Transfusion & Matching Engine · {user.district || 'Kerala'}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight break-words" style={{ fontFamily: "'DM Serif Display', serif" }}>
-              Welcome back, {user.name}
-            </h1>
-            <p className="mt-1.5 text-xs sm:text-sm text-red-100/90 leading-relaxed">
+
+            <div className="flex items-center gap-3.5 mb-2">
+              <UserAvatar
+                src={user.avatar || myDonorProfile?.avatar}
+                name={user.name}
+                size="lg"
+                className="border-2 border-white/30"
+              />
+              <div>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight break-words" style={{ fontFamily: "'DM Serif Display', serif" }}>
+                  Welcome back, {user.name}
+                </h1>
+                <p className="text-xs text-red-200">
+                  {user.phone ? `📞 ${user.phone}` : 'No phone set'} · {user.district || 'Kerala'}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-1 text-xs sm:text-sm text-red-100/90 leading-relaxed">
               Real-time matching connects verified district blood donors with patients in need — ensuring rapid emergency response with complete privacy.
             </p>
 
@@ -82,29 +107,27 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
               <button
                 onClick={() => setView('request-blood')}
-                className="w-full py-2.5 px-3 bg-white text-red-900 hover:bg-red-50 font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95"
+                className="w-full py-2.5 px-3 bg-white text-red-900 hover:bg-red-50 font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap overflow-hidden"
               >
-                <Droplet className="w-4 h-4 fill-red-700 text-red-700 flex-shrink-0" />
-                <span>Request Blood</span>
+                <Droplet className="w-4 h-4 fill-red-700 text-red-700 shrink-0" />
+                <span className="truncate">Request Blood</span>
               </button>
 
               <button
                 onClick={onOpenSOS}
-                className="w-full py-2.5 px-3 bg-red-600 hover:bg-red-500 text-white font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl border border-red-400/40 transition flex items-center justify-center gap-1.5 active:scale-95 animate-pulse"
+                className="w-full py-2.5 px-3 bg-red-600 hover:bg-red-500 text-white font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl border border-red-400/40 transition flex items-center justify-center gap-1.5 active:scale-95 animate-pulse whitespace-nowrap overflow-hidden"
               >
-                <Flame className="w-4 h-4 text-yellow-300 flex-shrink-0" />
-                <span>Emergency SOS</span>
+                <Flame className="w-4 h-4 text-yellow-300 shrink-0" />
+                <span className="truncate">Emergency SOS</span>
               </button>
 
-              {myDonorProfile && (
-                <button
-                  onClick={() => setShowDonorCardModal(true)}
-                  className="w-full py-2.5 px-3 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm rounded-xl sm:rounded-2xl border border-white/20 transition flex items-center justify-center gap-1.5 truncate"
-                >
-                  <Award className="w-4 h-4 text-yellow-300 flex-shrink-0" />
-                  <span className="truncate">Donor ID Card</span>
-                </button>
-              )}
+              <button
+                onClick={() => setShowEditProfileModal(true)}
+                className="w-full py-2.5 px-3 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm rounded-xl sm:rounded-2xl border border-white/20 transition flex items-center justify-center gap-1.5 whitespace-nowrap overflow-hidden"
+              >
+                <Edit3 className="w-4 h-4 text-yellow-300 shrink-0" />
+                <span className="truncate">Edit Profile</span>
+              </button>
             </div>
           </div>
 
@@ -113,17 +136,17 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/10">
               <Users className="w-4 h-4 text-red-200 mx-auto mb-0.5" />
               <p className="text-xl sm:text-2xl font-black text-white">{totalDonors}</p>
-              <p className="text-[10px] font-semibold text-red-200 truncate">Active Donors</p>
+              <p className="text-[10px] font-semibold text-red-100 truncate">Active Donors</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/10">
               <AlertCircle className="w-4 h-4 text-amber-300 mx-auto mb-0.5" />
               <p className="text-xl sm:text-2xl font-black text-white">{totalOpenRequests}</p>
-              <p className="text-[10px] font-semibold text-red-200 truncate">Open Requests</p>
+              <p className="text-[10px] font-semibold text-red-100 truncate">Open Requests</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 text-center border border-white/10">
               <ShieldCheck className="w-4 h-4 text-emerald-300 mx-auto mb-0.5" />
               <p className="text-xl sm:text-2xl font-black text-white">100%</p>
-              <p className="text-[10px] font-semibold text-red-200 truncate">Privacy Safe</p>
+              <p className="text-[10px] font-semibold text-red-100 truncate">Privacy Safe</p>
             </div>
           </div>
         </div>
@@ -148,7 +171,7 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
 
           <button
             onClick={() => setView('notifications')}
-            className="w-full sm:w-auto px-6 py-3 bg-white text-red-800 font-extrabold text-xs sm:text-sm rounded-2xl shadow hover:bg-red-50 transition"
+            className="w-full sm:w-auto px-6 py-3 bg-white text-red-800 font-extrabold text-xs sm:text-sm rounded-2xl shadow hover:bg-red-50 transition whitespace-nowrap"
           >
             Review & Respond Now →
           </button>
@@ -156,24 +179,26 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
       )}
 
       {/* Main 2-Column Dashboard Layout */}
-      <div className={`grid grid-cols-1 ${!isSimulator ? 'lg:grid-cols-3' : ''} gap-4 sm:gap-6`}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
         {/* Left 2 Columns: Donor Status + Quick Actions + Live Emergency Feed */}
-        <div className={`${!isSimulator ? 'lg:col-span-2' : ''} space-y-4 sm:space-y-6`}>
+        <div className="lg:col-span-2 space-y-5 sm:space-y-6">
           {/* Donor Profile Status Card */}
           {myDonorProfile ? (
             <div className="bg-white rounded-3xl border border-red-100 p-4 sm:p-6 shadow-sm">
               <div className="flex items-start justify-between mb-4 gap-2">
                 <div className="flex items-center gap-2.5 sm:gap-3">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                    eligible ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {eligible ? <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" /> : <Clock className="w-5 h-5 sm:w-6 sm:h-6" />}
-                  </div>
+                  <UserAvatar
+                    src={myDonorProfile.avatar || user.avatar}
+                    name={myDonorProfile.name}
+                    size="md"
+                    bloodGroup={myDonorProfile.bloodGroup}
+                    showBadge
+                  />
                   <div>
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-tight">
+                    <h2 className="font-bold text-gray-900 text-sm sm:text-base leading-tight">
                       {eligible ? 'Eligible to Donate Blood' : 'Donation Cooldown Active'}
-                    </h3>
-                    <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
+                    </h2>
+                    <p className="text-[11px] sm:text-xs text-gray-600 mt-0.5">
                       {eligible
                         ? daysSince !== null ? `Last donated ${daysSince} days ago · Active` : 'Ready for active requests'
                         : nextDate ? `Cooldown until ${nextDate.toLocaleDateString()}` : 'Cooldown active'}
@@ -193,7 +218,7 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                   </div>
                   <div className="h-2 bg-amber-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-amber-600 rounded-full transition-all"
+                      className="h-full bg-amber-600 rounded-full transition-[width] duration-300"
                       style={{ width: `${Math.min(100, ((daysSince ?? 0) / DONATION_INTERVAL_DAYS) * 100)}%` }}
                     />
                   </div>
@@ -208,18 +233,18 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                       ★ {donorBadge.title} ({myDonorProfile.totalDonations})
                     </span>
                   )}
-                  <span className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-gray-400" /> {user.phone || 'No phone set'}
+                  <span className="text-[11px] text-gray-600 font-medium flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-gray-500" /> {user.phone || 'No phone set'}
                   </span>
-                  <span className="text-[11px] text-gray-400">· {myDonorProfile.district}</span>
+                  <span className="text-[11px] text-gray-600">· {myDonorProfile.district}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setView('register-donor')}
-                    className="text-[11px] font-bold text-gray-600 hover:text-red-700 underline"
+                    onClick={() => setShowEditProfileModal(true)}
+                    className="text-[11px] font-bold text-gray-700 hover:text-red-700 underline flex items-center gap-1"
                   >
-                    Edit Phone / Info
+                    <Edit3 className="w-3 h-3" /> Edit Profile
                   </button>
                   <button
                     onClick={() => setShowDonorCardModal(true)}
@@ -237,9 +262,9 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                   <Heart className="w-6 h-6 fill-red-600 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 text-sm sm:text-base">Join Volunteer Blood Donors</h3>
-                  <p className="text-[11px] text-gray-600 mt-0.5">
-                    Phone: <strong className="text-gray-900">{user.phone || 'Not added yet'}</strong>. Register your blood group to receive emergency matches.
+                  <h2 className="font-bold text-gray-900 text-sm sm:text-base">Join Volunteer Blood Donors</h2>
+                  <p className="text-[11px] text-gray-700 mt-0.5">
+                    Phone: <strong className="text-gray-900">{user.phone || 'Not added yet'}</strong>. Register your blood group to receive emergency matches in {user.district || 'Kerala'}.
                   </p>
                 </div>
               </div>
@@ -254,10 +279,10 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
 
           {/* Quick Feature Grid */}
           <div>
-            <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-2.5">
               Explore Platform Features
-            </h3>
-            <div className={`grid grid-cols-1 ${!isSimulator ? 'sm:grid-cols-3' : ''} gap-2.5 sm:gap-3`}>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
               {/* Find Donors */}
               <button
                 onClick={() => setView('donors-directory')}
@@ -268,8 +293,8 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                     <Users className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Donor Directory</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-500">Search active district volunteers</p>
+                    <h3 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Donor Directory</h3>
+                    <p className="text-[10px] sm:text-xs text-gray-600">Search active district volunteers</p>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-400 sm:hidden" />
@@ -285,8 +310,8 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                     <GitCompare className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Blood Compatibility</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-500">Check medical transfusion matching</p>
+                    <h3 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Blood Compatibility</h3>
+                    <p className="text-[10px] sm:text-xs text-gray-600">Check medical transfusion matching</p>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-400 sm:hidden" />
@@ -302,8 +327,8 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                     <Building2 className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Blood Banks & Helplines</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-500">24/7 hospital inventory & hotlines</p>
+                    <h3 className="font-bold text-gray-900 text-xs sm:text-sm group-hover:text-red-700 transition">Blood Banks & Helplines</h3>
+                    <p className="text-[10px] sm:text-xs text-gray-600">24/7 hospital inventory & hotlines</p>
                   </div>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-400 sm:hidden" />
@@ -314,9 +339,9 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
           {/* Active Urgent Requests in District */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-600">
                 Active Critical & Urgent Requests
-              </h3>
+              </h2>
               <button
                 onClick={() => setView('my-requests')}
                 className="text-xs font-bold text-red-700 hover:text-red-800"
@@ -329,7 +354,7 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
               <div className="bg-white rounded-3xl border border-gray-100 p-6 text-center shadow-sm">
                 <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                 <p className="text-sm font-bold text-gray-800">All recent requests are fulfilled</p>
-                <p className="text-xs text-gray-400 mt-1">No outstanding emergency shortage at this time.</p>
+                <p className="text-xs text-gray-600 mt-1">No outstanding emergency shortage at this time.</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -338,20 +363,29 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
                     key={req.id}
                     className="bg-white rounded-3xl border border-red-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <BloodBadge group={req.bloodGroup} />
-                        <UrgencyBadge urgency={req.urgency} size="sm" />
-                        <span className="text-xs font-bold text-gray-800">{req.patientName}</span>
+                    <div className="flex items-center gap-3">
+                      <UserAvatar
+                        src={req.requestorAvatar}
+                        name={req.requestorName}
+                        size="md"
+                        bloodGroup={req.bloodGroup}
+                        showBadge
+                      />
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <BloodBadge group={req.bloodGroup} />
+                          <UrgencyBadge urgency={req.urgency} size="sm" />
+                          <span className="text-xs font-bold text-gray-800">{req.patientName}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {req.hospital} · {req.district}
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        {req.hospital} · {req.district}
-                      </p>
                     </div>
 
                     <button
                       onClick={() => setView('request-blood')}
-                      className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-800 font-bold text-xs rounded-xl transition"
+                      className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-800 font-bold text-xs rounded-xl transition whitespace-nowrap self-end sm:self-auto"
                     >
                       View Details
                     </button>
@@ -370,9 +404,9 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
               <ShieldCheck className="w-5 h-5" />
               <span className="text-xs font-bold uppercase tracking-wider">Self Assessment</span>
             </div>
-            <h3 className="text-xl font-bold mb-1" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            <h2 className="text-xl font-bold mb-1" style={{ fontFamily: "'DM Serif Display', serif" }}>
               Can You Donate Today?
-            </h3>
+            </h2>
             <p className="text-xs text-red-100 mb-4 leading-relaxed">
               Take our interactive 1-minute screener to check weight, age, and interval eligibility before heading to a center.
             </p>
@@ -387,7 +421,7 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
           {/* Quick Compatibility Guide Widget */}
           <div className="bg-white rounded-3xl border border-red-100 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900 text-base">Blood Type Quick Match</h3>
+              <h2 className="font-bold text-gray-900 text-base">Blood Type Quick Match</h2>
               <button
                 onClick={() => setView('compatibility')}
                 className="text-xs font-bold text-red-700 hover:underline"
@@ -414,13 +448,13 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
 
           {/* Emergency 24/7 Helpline Widget */}
           <div className="bg-white rounded-3xl border border-red-100 p-6 shadow-sm">
-            <h3 className="font-bold text-gray-900 text-base mb-2">Emergency Hotline</h3>
-            <p className="text-xs text-gray-500 mb-3">For acute trauma and mass casualty blood supply dispatch.</p>
+            <h2 className="font-bold text-gray-900 text-base mb-2">Emergency Hotline</h2>
+            <p className="text-xs text-gray-600 mb-3">For acute trauma and mass casualty blood supply dispatch.</p>
             <a
-              href="tel:18005550199"
+              href="tel:108"
               className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-800 font-bold text-xs rounded-2xl border border-red-200 flex items-center justify-center gap-2 transition"
             >
-              <Phone className="w-4 h-4 text-red-600" /> Call 1-800-555-BLOOD
+              <Phone className="w-4 h-4 text-red-600" /> Call 108 Emergency Ambulance
             </a>
           </div>
         </div>
@@ -429,6 +463,19 @@ export default function Home({ user, setView, onOpenSOS, isSimulator = false }: 
       {/* Modal for Donor ID card */}
       {showDonorCardModal && myDonorProfile && (
         <DonorCardModal donor={myDonorProfile} onClose={() => setShowDonorCardModal(false)} />
+      )}
+
+      {/* Modal for Edit Profile */}
+      {showEditProfileModal && (
+        <EditProfileModal
+          user={user}
+          donorProfile={myDonorProfile}
+          onClose={() => setShowEditProfileModal(false)}
+          onSaved={(updated) => {
+            if (onUserUpdated) onUserUpdated(updated)
+          }}
+          onToast={onToast}
+        />
       )}
     </div>
   )

@@ -1,7 +1,7 @@
 import { X, Award, ShieldCheck, Heart, Share2, Sparkles, MapPin, Calendar, Phone } from 'lucide-react'
 import type { Donor } from '../types'
 import { getDonorBadge, daysSinceLastDonation, canDonate, nextEligibleDate } from '../store'
-import BloodBadge from './BloodBadge'
+import UserAvatar from './UserAvatar'
 
 interface Props {
   donor: Donor
@@ -13,13 +13,13 @@ export default function DonorCardModal({ donor, onClose }: Props) {
   const isEligible = canDonate(donor)
   const daysSince = daysSinceLastDonation(donor)
   const nextDate = nextEligibleDate(donor)
-  const livesImpacted = Math.max(1, donor.totalDonations * 3)
+  const livesSaved = donor.totalDonations > 0 ? donor.totalDonations * 3 : 0
 
   function handleShare() {
     if (navigator.share) {
       navigator.share({
         title: `${donor.name} - BloodLink Donor`,
-        text: `I'm a registered ${donor.bloodGroup} blood donor on BloodLink! ${donor.totalDonations} donations, saving up to ${livesImpacted} lives.`,
+        text: `I'm a registered ${donor.bloodGroup} blood donor on BloodLink (${donor.district}, ${donor.state || 'India'})! ${donor.totalDonations} donations completed, saving ${livesSaved} lives.`,
         url: window.location.href,
       }).catch(() => {})
     } else {
@@ -46,14 +46,24 @@ export default function DonorCardModal({ donor, onClose }: Props) {
             <span className="text-xs font-bold uppercase tracking-widest text-red-200">Official Digital Donor Card</span>
           </div>
 
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-2xl font-bold tracking-tight">{donor.name}</h3>
-              <p className="text-xs text-red-200 flex items-center gap-1.5 mt-1">
-                <MapPin className="w-3.5 h-3.5 text-red-300" /> {donor.district}
-              </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <UserAvatar
+                src={donor.avatar}
+                name={donor.name}
+                size="lg"
+                className="border-2 border-white/40"
+              />
+              <div>
+                <h3 className="text-xl font-bold tracking-tight leading-tight">{donor.name}</h3>
+                <p className="text-xs text-red-200 flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5 text-red-300 flex-shrink-0" />
+                  <span>{donor.district}{donor.state ? `, ${donor.state}` : ''}</span>
+                </p>
+              </div>
             </div>
-            <div className="flex flex-col items-end">
+
+            <div className="flex flex-col items-end flex-shrink-0">
               <span className="text-2xl font-black px-3 py-1 bg-white text-red-800 rounded-2xl shadow-md border-2 border-red-200">
                 {donor.bloodGroup}
               </span>
@@ -88,14 +98,14 @@ export default function DonorCardModal({ donor, onClose }: Props) {
             </div>
           )}
 
-          {/* Stats Grid */}
+          {/* Stats Grid - Clean numbers without minus or ~ */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm text-center">
               <p className="text-2xl font-black text-red-700">{donor.totalDonations}</p>
               <p className="text-[11px] font-semibold text-gray-500">Donations</p>
             </div>
             <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm text-center">
-              <p className="text-2xl font-black text-emerald-600">~{livesImpacted}</p>
+              <p className="text-2xl font-black text-emerald-600">{livesSaved}</p>
               <p className="text-[11px] font-semibold text-gray-500">Lives Saved</p>
             </div>
             <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm text-center">

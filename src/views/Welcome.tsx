@@ -181,32 +181,40 @@ export default function Welcome({ onLogin }: Props) {
               )}
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                <label htmlFor="welcomeName" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
                   Full Name
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
+                    id="welcomeName"
+                    name="name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Priya Sharma"
+                    autoComplete="name"
+                    required
                     className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                <label htmlFor="welcomePhone" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
                   Phone Number
                 </label>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
+                    id="welcomePhone"
+                    name="phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1-555-0100"
+                    placeholder="+91 98765 43210"
+                    autoComplete="tel"
+                    required
                     className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
                   />
                 </div>

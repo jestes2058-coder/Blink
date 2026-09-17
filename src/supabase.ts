@@ -6,7 +6,11 @@ const getSupabaseUrl = () => {
     const custom = localStorage.getItem('bd_custom_sb_url')
     if (custom) return custom
   }
-  return import.meta.env.VITE_SUPABASE_URL || ''
+  return (
+    import.meta.env.VITE_SUPABASE_URL ||
+    import.meta.env.SUPABASE_URL ||
+    'https://cvhmqcxdgcqmzwwnqpuf.supabase.co'
+  )
 }
 
 const getSupabaseKey = () => {
@@ -14,7 +18,12 @@ const getSupabaseKey = () => {
     const custom = localStorage.getItem('bd_custom_sb_key')
     if (custom) return custom
   }
-  return import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+  return (
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    import.meta.env.VITE_SUPABASE_ANON_KEY ||
+    import.meta.env.SUPABASE_PUBLISHABLE_KEY ||
+    'sb_publishable_A8gNAnC9-XjdFpLqMrngNw_FkGx6q1t'
+  )
 }
 
 const supabaseUrl = getSupabaseUrl()

@@ -1,0 +1,22 @@
+# BloodLink — Emergency Blood Donor Matching Application
+
+> BloodLink is a community-driven blood donation and emergency matching web application connecting patients and hospitals with verified local donors across Indian states and districts (with deep Kerala district coverage).
+
+## Core Capabilities
+- **Donor Directory**: Search verified blood donors by Indian state, district, and blood group (A+, A-, B+, B-, AB+, AB-, O+, O-).
+- **Emergency SOS Broadcast**: Real-time trauma and ICU blood request broadcast with audible emergency siren alerts.
+- **Blood Request Management**: Create and track urgent blood transfusion requests with hospital location tags.
+- **Compatibility Matrix**: Medical compatibility guide for red blood cells and plasma transfusions.
+- **Eligibility Screener**: Interactive multi-step health questionnaire checking age, weight, and donation intervals.
+- **Hospital & Blood Bank Directory**: 24/7 emergency hospital contact numbers and blood bank listings.
+- **Supabase Integration**: Real-time cloud database synchronization with offline fallback storage.
+
+## Navigation & Endpoints
+- [Home Dashboard](/) or [Home Dashboard (Hash)](/#/home): Main dashboard with statistics, urgent requests, and quick actions.
+- [Request Blood](/#/request-blood): Submit an emergency or planned blood requirement.
+- [My Requests](/#/my-requests): View status of submitted blood requests and match responses.
+- [Donors Directory](/#/donors-directory): Filter and contact available blood donors across districts.
+- [Register as Donor](/#/register-donor): Register as a volunteer blood donor with blood type and contact details.
+- [Blood Compatibility Matrix](/#/compatibility): Interactive ABO and Rh compatibility matrix for red blood cells.
+- [Eligibility Quiz](/#/eligibility-quiz): Self-assessment donor screener with 90-day cooldown interval guidance.
+- [Blood Banks & Helplines](/#/blood-banks): District-wise directory of blood banks and 24/7 emergency hotlines.

@@ -84,6 +84,7 @@ export default function InstallAppBanner({ onInstall, deferredPrompt }: Props) {
               </h3>
               <button
                 onClick={() => setShowIOSPrompt(false)}
+                aria-label="Close iOS install modal"
                 className="p-1 rounded-full text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />

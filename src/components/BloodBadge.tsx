@@ -18,7 +18,7 @@ export default function BloodBadge({ group, size = 'md', showTag = false, select
     lg: 'text-sm px-3.5 py-1.5 font-extrabold',
   }
 
-  const baseClasses = `inline-flex items-center gap-1.5 rounded-full transition-all duration-200 border ${sizeStyles[size]} ${
+  const baseClasses = `inline-flex items-center gap-1.5 rounded-full transition-colors duration-150 border ${sizeStyles[size]} ${
     selected
       ? 'bg-red-700 text-white border-red-700 shadow-md shadow-red-200 ring-2 ring-red-400 ring-offset-1'
       : onClick
@@ -26,15 +26,34 @@ export default function BloodBadge({ group, size = 'md', showTag = false, select
       : 'bg-red-50 text-red-800 border-red-200'
   }`
 
-  return (
-    <span className={baseClasses} onClick={onClick}>
-      <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+  const innerContent = (
+    <>
+      <span className="inline-block w-2 h-2 rounded-full bg-red-600 animate-pulse" aria-hidden="true" />
       <span>{group}</span>
       {showTag && (
         <span className="text-[9px] font-medium tracking-tight opacity-75">
           {isUniversalDonor ? 'Universal Donor' : isUniversalRecipient ? 'Universal Recipient' : ''}
         </span>
       )}
+    </>
+  )
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={`Select blood group ${group}`}
+        className={baseClasses}
+      >
+        {innerContent}
+      </button>
+    )
+  }
+
+  return (
+    <span className={baseClasses}>
+      {innerContent}
     </span>
   )
 }

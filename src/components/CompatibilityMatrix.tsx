@@ -34,7 +34,7 @@ export default function CompatibilityMatrix() {
 
       {/* Blood Group Selectors */}
       <div className="mb-6">
-        <label className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2.5 block">
+        <label className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-2.5 block">
           Choose Blood Group
         </label>
         <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
@@ -45,14 +45,14 @@ export default function CompatibilityMatrix() {
                 key={group}
                 type="button"
                 onClick={() => setSelectedGroup(group)}
-                className={`py-3 px-2 rounded-2xl font-black text-sm transition-all duration-200 flex flex-col items-center justify-center gap-1 border-2 ${
+                className={`py-3 px-2 rounded-2xl font-black text-sm transition-colors transition-transform duration-150 flex flex-col items-center justify-center gap-1 border-2 ${
                   isSelected
-                    ? 'bg-red-700 border-red-700 text-white shadow-lg shadow-red-200 scale-105'
-                    : 'bg-white border-gray-100 text-gray-700 hover:border-red-200 hover:bg-red-50/50'
+                    ? 'bg-red-700 border-red-700 text-white shadow-md shadow-red-200 ring-2 ring-red-400 ring-offset-2 scale-105'
+                    : 'bg-white border-gray-200 text-gray-800 hover:border-red-300'
                 }`}
               >
                 <span>{group}</span>
-                <span className={`text-[9px] font-normal leading-tight ${isSelected ? 'text-red-100' : 'text-gray-400'}`}>
+                <span className={`text-[9px] font-normal leading-tight ${isSelected ? 'text-red-100' : 'text-gray-600'}`}>
                   {group === 'O-' ? 'Univ. Donor' : group === 'AB+' ? 'Univ. Recipient' : 'Type'}
                 </span>
               </button>
@@ -87,7 +87,7 @@ export default function CompatibilityMatrix() {
           className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 border-b-2 transition ${
             activeTab === 'donate'
               ? 'border-red-700 text-red-700'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              : 'border-transparent text-gray-600 hover:text-gray-800'
           }`}
         >
           <ArrowRight className="w-4 h-4" /> If You Have {selectedGroup} (Can Give To)
@@ -97,7 +97,7 @@ export default function CompatibilityMatrix() {
           className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 border-b-2 transition ${
             activeTab === 'receive'
               ? 'border-red-700 text-red-700'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              : 'border-transparent text-gray-600 hover:text-gray-800'
           }`}
         >
           <ArrowLeft className="w-4 h-4" /> If You Need {selectedGroup} (Can Receive From)
@@ -122,7 +122,7 @@ export default function CompatibilityMatrix() {
               return (
                 <div
                   key={target}
-                  className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
+                  className={`p-3.5 rounded-2xl border transition-colors flex items-center justify-between ${
                     isCompatible
                       ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950 shadow-sm'
                       : 'bg-gray-50/60 border-gray-100 text-gray-400 opacity-60'
@@ -167,7 +167,7 @@ export default function CompatibilityMatrix() {
               return (
                 <div
                   key={target}
-                  className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
+                  className={`p-3.5 rounded-2xl border transition-colors flex items-center justify-between ${
                     isCompatible
                       ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950 shadow-sm'
                       : 'bg-gray-50/60 border-gray-100 text-gray-400 opacity-60'

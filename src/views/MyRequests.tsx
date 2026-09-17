@@ -19,12 +19,12 @@ import type { CurrentUser, View, BloodRequest } from '../types'
 import { store } from '../store'
 import BloodBadge from '../components/BloodBadge'
 import UrgencyBadge from '../components/UrgencyBadge'
+import UserAvatar from '../components/UserAvatar'
 
 interface Props {
   user: CurrentUser
   setView: (v: View) => void
   onToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
-  isSimulator?: boolean
 }
 
 function timeAgo(iso: string): string {
@@ -37,7 +37,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-export default function MyRequests({ user, setView, onToast, isSimulator = false }: Props) {
+export default function MyRequests({ user, setView, onToast }: Props) {
   const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'fulfilled'>('all')
   const [, forceUpdate] = useState(0)
   const refresh = () => forceUpdate(n => n + 1)
@@ -65,7 +65,7 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
   }
 
   return (
-    <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6'} overflow-x-hidden`}>
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 overflow-x-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl mb-4 sm:mb-6">
         <div className="flex items-center gap-2 mb-2">
@@ -98,7 +98,7 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
 
       {/* Filter tabs */}
       <div className="flex items-center justify-between gap-2 flex-wrap border-b border-gray-100 pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setFilterStatus('all')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
@@ -134,10 +134,10 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
 
       {/* Requests List */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-sm max-w-md mx-auto">
-          <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-gray-800 mb-1">No requests in this category</h3>
-          <p className="text-xs text-gray-500 mb-6">
+        <div className="bg-white rounded-3xl border border-gray-100 p-10 sm:p-12 text-center shadow-sm max-w-md mx-auto space-y-3">
+          <Search className="w-12 h-12 text-gray-300 mx-auto" />
+          <h2 className="text-lg font-bold text-gray-800">No requests in this category</h2>
+          <p className="text-xs text-gray-600">
             When you create a blood requirement, it will appear here with live match statuses.
           </p>
           <button
@@ -158,36 +158,39 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
             return (
               <div
                 key={req.id}
-                className="bg-white rounded-3xl border border-red-100 shadow-sm overflow-hidden p-6 space-y-4"
+                className="bg-white rounded-3xl border border-red-100 shadow-sm overflow-hidden p-5 sm:p-6 space-y-4"
               >
                 {/* Header row */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <h3 className="text-xl font-bold text-gray-900">{req.patientName}</h3>
-                      <BloodBadge group={req.bloodGroup} />
-                      <UrgencyBadge urgency={req.urgency} size="sm" />
-                      <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
-                        req.status === 'open' ? 'bg-blue-100 text-blue-700' :
-                        req.status === 'fulfilled' ? 'bg-emerald-100 text-emerald-800' :
-                        'bg-gray-100 text-gray-600'
-                      }`}>
-                        {req.status}
-                      </span>
-                    </div>
+                  <div className="flex items-start gap-3">
+                    <UserAvatar src={req.requestorAvatar || user.avatar} name={req.patientName} size="lg" />
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">{req.patientName}</h2>
+                        <BloodBadge group={req.bloodGroup} />
+                        <UrgencyBadge urgency={req.urgency} size="sm" />
+                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
+                          req.status === 'open' ? 'bg-blue-100 text-blue-700' :
+                          req.status === 'fulfilled' ? 'bg-emerald-100 text-emerald-800' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {req.status}
+                        </span>
+                      </div>
 
-                    <p className="text-xs text-gray-500 flex items-center gap-3">
-                      <span className="flex items-center gap-1 font-medium">
-                        <MapPin className="w-3.5 h-3.5 text-red-600" /> {req.hospital} ({req.district})
-                      </span>
-                      <span>·</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-gray-400" /> {timeAgo(req.createdAt)}
-                      </span>
-                    </p>
+                      <p className="text-xs text-gray-600 flex items-center gap-2 flex-wrap">
+                        <span className="flex items-center gap-1 font-medium">
+                          <MapPin className="w-3.5 h-3.5 text-red-600" /> {req.hospital} ({req.district}{req.state ? `, ${req.state}` : ''})
+                        </span>
+                        <span>·</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-gray-500" /> {timeAgo(req.createdAt)}
+                        </span>
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
                     {req.status === 'open' && (
                       <button
                         onClick={() => handleMarkFulfilled(req)}
@@ -200,6 +203,7 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
                       onClick={() => handleDelete(req.id)}
                       className="p-2 text-gray-400 hover:text-red-700 rounded-xl hover:bg-red-50 transition"
                       title="Cancel Request"
+                      aria-label="Cancel Request"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -212,7 +216,7 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
                     <span className="font-bold text-gray-700">
                       Donor Match Response ({total} notified in district)
                     </span>
-                    <span className="text-gray-500">
+                    <span className="text-gray-600">
                       {accepted.length > 0 && <span className="text-emerald-700 font-bold">{accepted.length} Accepted · </span>}
                       {pending.length > 0 && <span className="text-blue-600 font-medium">{pending.length} Pending</span>}
                     </span>
@@ -222,19 +226,19 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
                     <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden flex">
                       {accepted.length > 0 && (
                         <div
-                          className="h-full bg-emerald-500 transition-all duration-300"
+                          className="h-full bg-emerald-500 transition-[width] duration-300"
                           style={{ width: `${(accepted.length / total) * 100}%` }}
                         />
                       )}
                       {pending.length > 0 && (
                         <div
-                          className="h-full bg-blue-400 transition-all duration-300"
+                          className="h-full bg-blue-400 transition-[width] duration-300"
                           style={{ width: `${(pending.length / total) * 100}%` }}
                         />
                       )}
                       {declined.length > 0 && (
                         <div
-                          className="h-full bg-gray-400 transition-all duration-300"
+                          className="h-full bg-gray-400 transition-[width] duration-300"
                           style={{ width: `${(declined.length / total) * 100}%` }}
                         />
                       )}
@@ -249,7 +253,7 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
                 {/* Matches Donor List */}
                 {total > 0 && (
                   <div className="space-y-2 pt-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-600">
                       Individual Donor Match Records:
                     </p>
 
@@ -270,13 +274,13 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
                                 : 'bg-blue-50/50 border-blue-100'
                             }`}
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
-                                  isAccepted ? 'bg-emerald-200 text-emerald-900' : 'bg-gray-200 text-gray-700'
-                                }`}>
-                                  {match.donorName.charAt(0)}
-                                </div>
+                            <div className="flex items-center justify-between mb-2 gap-2">
+                              <div className="flex items-center gap-2.5">
+                                <UserAvatar
+                                  src={match.donorAvatar || donorObj?.avatar}
+                                  name={match.donorName}
+                                  size="sm"
+                                />
                                 <div>
                                   <p className="text-sm font-bold text-gray-900">{match.donorName}</p>
                                   <p className="text-[11px] text-gray-500">{match.donorBloodGroup} Donor</p>
@@ -297,7 +301,7 @@ export default function MyRequests({ user, setView, onToast, isSimulator = false
                               <div className="mt-1 pt-2 border-t border-emerald-200/60 flex items-center justify-between">
                                 <div className="text-xs">
                                   <span className="text-emerald-700 font-semibold block">Donor Phone:</span>
-                                  <span className="font-bold text-gray-900 text-sm">{donorObj?.phone || '+1-555-0100'}</span>
+                                  <span className="font-bold text-gray-900 text-sm">{donorObj?.phone || '+91 98765 43210'}</span>
                                 </div>
 
                                 <a

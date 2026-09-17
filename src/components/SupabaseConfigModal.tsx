@@ -154,10 +154,12 @@ CREATE POLICY "Public update requests" ON public.blood_requests FOR UPDATE USING
 
         <form onSubmit={handleSave} className="space-y-4 text-xs">
           <div>
-            <label className="block font-bold uppercase tracking-wider text-gray-500 mb-1.5 flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-gray-400" /> Supabase Project URL
+            <label htmlFor="supabaseUrlInput" className="block font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-gray-500" /> Supabase Project URL
             </label>
             <input
+              id="supabaseUrlInput"
+              name="supabaseUrl"
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -167,10 +169,12 @@ CREATE POLICY "Public update requests" ON public.blood_requests FOR UPDATE USING
           </div>
 
           <div>
-            <label className="block font-bold uppercase tracking-wider text-gray-500 mb-1.5 flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-gray-400" /> Public Anon API Key
+            <label htmlFor="supabaseKeyInput" className="block font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-gray-500" /> Public Anon API Key
             </label>
             <input
+              id="supabaseKeyInput"
+              name="supabaseKey"
               type="password"
               value={key}
               onChange={(e) => setKey(e.target.value)}

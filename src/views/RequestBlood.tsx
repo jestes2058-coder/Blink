@@ -12,30 +12,36 @@ import {
   CheckCircle2,
   ArrowRight,
   Flame,
+  Mail,
 } from 'lucide-react'
 import type { BloodGroup, Urgency, CurrentUser, View } from '../types'
 import {
   BLOOD_GROUPS,
-  DISTRICTS,
   store,
   findEligibleDonors,
   COMPATIBLE_DONORS,
 } from '../store'
+import {
+  INDIAN_STATES_AND_DISTRICTS,
+  getDistrictsForState,
+  DEFAULT_STATE,
+} from '../data/indianLocations'
 import BloodBadge from '../components/BloodBadge'
 import UrgencyBadge from '../components/UrgencyBadge'
+import UserAvatar from '../components/UserAvatar'
 
 interface Props {
   user: CurrentUser
   setView: (v: View) => void
   onToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
-  isSimulator?: boolean
 }
 
-export default function RequestBlood({ user, setView, onToast, isSimulator = false }: Props) {
+export default function RequestBlood({ user, setView, onToast }: Props) {
   const [step, setStep] = useState<'form' | 'preview' | 'done'>('form')
   const [patientName, setPatientName] = useState('')
-  const [bloodGroup, setBloodGroup] = useState<BloodGroup>('O+')
-  const [district, setDistrict] = useState('Central District')
+  const [bloodGroup, setBloodGroup] = useState<BloodGroup>(user.bloodGroup || 'O+')
+  const [state, setState] = useState(user.state || DEFAULT_STATE)
+  const [district, setDistrict] = useState(user.district || 'Ernakulam')
   const [urgency, setUrgency] = useState<Urgency>('urgent')
   const [hospital, setHospital] = useState('')
   const [unitsNeeded, setUnitsNeeded] = useState(1)
@@ -45,6 +51,15 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
 
   const donors = store.getDonors()
   const compatibleTypes = COMPATIBLE_DONORS[bloodGroup] || []
+  const availableDistricts = getDistrictsForState(state)
+
+  function handleStateChange(newState: string) {
+    setState(newState)
+    const dists = getDistrictsForState(newState)
+    if (!dists.includes(district)) {
+      setDistrict(dists[0] || '')
+    }
+  }
 
   // Calculate live available donors in the selected district
   const currentEligible = findEligibleDonors(
@@ -79,8 +94,10 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
       requestorId: user.id,
       requestorName: user.name,
       requestorPhone: user.phone,
+      requestorAvatar: user.avatar,
       patientName: patientName.trim(),
       bloodGroup,
+      state,
       district,
       urgency,
       hospital: hospital.trim(),
@@ -90,9 +107,9 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
 
     const count = newReq.matches.length
     if (count > 0) {
-      onToast('success', 'Request Broadcasted', `Notified ${count} eligible donor${count > 1 ? 's' : ''} in ${district}.`)
+      onToast('success', 'Request Broadcasted', `Notified ${count} eligible donor${count > 1 ? 's' : ''} in ${district}, ${state}.`)
     } else {
-      onToast('info', 'Request Saved', 'Request recorded. Donors will match as soon as volunteers become available.')
+      onToast('info', 'Request Saved', 'Request recorded. Donors will match as soon as volunteers in your district become available.')
     }
 
     setStep('done')
@@ -100,7 +117,7 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
 
   if (step === 'done') {
     return (
-      <div className={`w-full ${isSimulator ? 'px-3 py-6' : 'max-w-2xl mx-auto px-4 py-12'} text-center space-y-6`}>
+      <div className="w-full max-w-2xl mx-auto px-4 py-12 text-center space-y-6">
         <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-100 shadow-sm animate-bounce">
           <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10" />
         </div>
@@ -109,7 +126,18 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
             Blood Request Broadcasted!
           </h2>
           <p className="text-gray-500 text-xs sm:text-sm mt-2 max-w-md mx-auto">
-            Your emergency request has been matched with eligible district donors. You will receive live response alerts on your dashboard.
+            Your emergency request has been matched with eligible district donors in {district}, {state}. You will receive live response alerts on your dashboard.
+          </p>
+        </div>
+
+        {/* Situational Email Broadcast Alert Card */}
+        <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 text-left max-w-md mx-auto space-y-2 text-xs">
+          <p className="font-bold text-red-950 flex items-center gap-2">
+            <Mail className="w-4 h-4 text-red-700 flex-shrink-0" />
+            <span>Situational Email Alerts Dispatched</span>
+          </p>
+          <p className="text-gray-600 text-[11px] leading-relaxed">
+            Personalized emergency alert emails containing patient hospital details, required blood units, and response action links were dispatched to all eligible {bloodGroup} compatible donors in {district}.
           </p>
         </div>
 
@@ -133,7 +161,7 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
 
   if (step === 'preview') {
     return (
-      <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-2xl mx-auto px-4 py-8 space-y-6'} overflow-x-hidden`}>
+      <div className="w-full max-w-2xl mx-auto px-4 py-8 space-y-6 overflow-x-hidden">
         <div className="bg-gradient-to-r from-red-900 to-rose-900 rounded-3xl p-5 sm:p-6 text-white shadow-xl">
           <button
             onClick={() => setStep('form')}
@@ -149,10 +177,13 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
 
         <div className="bg-white rounded-3xl border border-red-100 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Summary Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Patient</p>
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900">{patientName}</h3>
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 gap-3">
+            <div className="flex items-center gap-3">
+              <UserAvatar src={user.avatar} name={user.name} size="md" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Requestor: {user.name}</p>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Patient: {patientName}</h2>
+              </div>
             </div>
             <UrgencyBadge urgency={urgency} />
           </div>
@@ -160,19 +191,19 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
           {/* Details Grid */}
           <div className="grid grid-cols-2 gap-2.5 sm:gap-4 text-xs">
             <div className="bg-gray-50 p-3 sm:p-4 rounded-2xl">
-              <p className="text-gray-400 font-semibold mb-1 text-[11px]">Blood Group Needed</p>
+              <p className="text-gray-600 font-semibold mb-1 text-[11px]">Blood Group Needed</p>
               <BloodBadge group={bloodGroup} size="sm" />
             </div>
             <div className="bg-gray-50 p-3 sm:p-4 rounded-2xl">
-              <p className="text-gray-400 font-semibold mb-1 text-[11px]">Hospital / Clinic</p>
+              <p className="text-gray-600 font-semibold mb-1 text-[11px]">Hospital / Clinic</p>
               <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{hospital}</p>
             </div>
             <div className="bg-gray-50 p-3 sm:p-4 rounded-2xl">
-              <p className="text-gray-400 font-semibold mb-1 text-[11px]">District Location</p>
-              <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{district}</p>
+              <p className="text-gray-600 font-semibold mb-1 text-[11px]">Location</p>
+              <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{district}, {state}</p>
             </div>
             <div className="bg-gray-50 p-3 sm:p-4 rounded-2xl">
-              <p className="text-gray-400 font-semibold mb-1 text-[11px]">Units Required</p>
+              <p className="text-gray-600 font-semibold mb-1 text-[11px]">Units Required</p>
               <p className="text-xs sm:text-sm font-bold text-gray-800">{unitsNeeded} Unit{unitsNeeded > 1 ? 's' : ''}</p>
             </div>
           </div>
@@ -194,13 +225,13 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
               <Users className="w-4 h-4 flex-shrink-0" />
               <span>
                 {matchCount > 0
-                  ? `${matchCount} eligible volunteer donor${matchCount > 1 ? 's' : ''} found in ${district}`
-                  : `0 donors in ${district} right now`}
+                  ? `${matchCount} eligible volunteer donor${matchCount > 1 ? 's' : ''} found in ${district}, ${state}`
+                  : `0 donors found in ${district} right now`}
               </span>
             </div>
             <p className="text-[11px] mt-1 opacity-90">
               {matchCount > 0
-                ? 'Matched donors will receive an instant emergency push notification.'
+                ? 'Matched donors will receive an instant emergency push notification and alarm alert.'
                 : 'Your request will stay active on the emergency board and match when donors become available.'}
             </p>
           </div>
@@ -218,7 +249,7 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
   }
 
   return (
-    <div className={`w-full ${isSimulator ? 'px-3 py-4 space-y-4' : 'max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6'} overflow-x-hidden`}>
+    <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 overflow-x-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-red-900 via-red-800 to-rose-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl mb-4 sm:mb-6">
         <div className="flex items-center gap-2 mb-2">
@@ -246,14 +277,17 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
 
         {/* Patient Name */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+          <label htmlFor="patientName" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
             Patient Full Name *
           </label>
           <input
+            id="patientName"
+            name="patientName"
             type="text"
             value={patientName}
             onChange={(e) => setPatientName(e.target.value)}
-            placeholder="e.g. Maya Krishnan"
+            placeholder="e.g. Anjali Menon"
+            required
             className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
           />
         </div>
@@ -261,9 +295,9 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
         {/* Blood Group Required */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-700">
               Required Blood Group *
-            </label>
+            </span>
             <span className="text-xs text-gray-500">
               Compatible with donors: <span className="font-bold text-red-700">{compatibleTypes.join(', ')}</span>
             </span>
@@ -277,7 +311,7 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
                   key={g}
                   type="button"
                   onClick={() => setBloodGroup(g)}
-                  className={`py-3 rounded-2xl font-black text-sm transition-all flex flex-col items-center justify-center border-2 ${
+                  className={`py-3 rounded-2xl font-black text-sm transition-colors duration-150 flex flex-col items-center justify-center border-2 ${
                     isSelected
                       ? 'bg-red-700 border-red-700 text-white shadow-md shadow-red-200 scale-105'
                       : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
@@ -292,9 +326,9 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
 
         {/* Urgency Level */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+          <span className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
             Urgency Level *
-          </label>
+          </span>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {urgencies.map((u) => {
               const isSelected = urgency === u.val
@@ -303,7 +337,7 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
                   key={u.val}
                   type="button"
                   onClick={() => setUrgency(u.val)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between ${
+                  className={`p-4 rounded-2xl border-2 text-left transition-colors duration-150 flex flex-col justify-between ${
                     isSelected
                       ? u.val === 'critical'
                         ? 'bg-red-700 border-red-700 text-white shadow-md shadow-red-200'
@@ -314,7 +348,7 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
                   }`}
                 >
                   <span className="font-bold text-sm">{u.label}</span>
-                  <span className={`text-[11px] mt-1 ${isSelected ? 'opacity-90' : 'text-gray-400'}`}>
+                  <span className={`text-[11px] mt-1 ${isSelected ? 'opacity-90' : 'text-gray-600'}`}>
                     {u.desc}
                   </span>
                 </button>
@@ -323,53 +357,81 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
           </div>
         </div>
 
-        {/* District & Hospital */}
+        {/* State & District Cascading Select */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-              District Location *
+            <label htmlFor="requestState" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
+              State (India) *
             </label>
             <div className="relative">
               <MapPin className="w-4 h-4 text-red-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <select
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+                id="requestState"
+                name="state"
+                value={state}
+                onChange={(e) => handleStateChange(e.target.value)}
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition font-medium"
               >
-                {DISTRICTS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
+                {INDIAN_STATES_AND_DISTRICTS.map((s) => (
+                  <option key={s.state} value={s.state}>{s.state}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-              Hospital / Clinic Name *
+            <label htmlFor="requestDistrict" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
+              District ({state}) *
             </label>
             <div className="relative">
-              <Building2 className="w-4 h-4 text-red-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={hospital}
-                onChange={(e) => setHospital(e.target.value)}
-                placeholder="e.g. City General Hospital, ICU Ward 2"
-                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
-              />
+              <MapPin className="w-4 h-4 text-red-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <select
+                id="requestDistrict"
+                name="district"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition font-medium"
+              >
+                {availableDistricts.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
             </div>
+          </div>
+        </div>
+
+        {/* Hospital */}
+        <div>
+          <label htmlFor="hospitalName" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
+            Hospital / Clinic Name *
+          </label>
+          <div className="relative">
+            <Building2 className="w-4 h-4 text-red-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              id="hospitalName"
+              name="hospital"
+              type="text"
+              value={hospital}
+              onChange={(e) => setHospital(e.target.value)}
+              placeholder="e.g. Aster Medcity, Kochi or Medical College Ward 3"
+              required
+              className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+            />
           </div>
         </div>
 
         {/* Units Needed & Clinical Notes */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+            <label htmlFor="unitsNeeded" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
               Units Needed
             </label>
             <select
+              id="unitsNeeded"
+              name="unitsNeeded"
               value={unitsNeeded}
               onChange={(e) => setUnitsNeeded(Number(e.target.value))}
-              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+              className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition font-medium"
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>{n} Unit{n > 1 ? 's' : ''}</option>
@@ -378,14 +440,16 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+            <label htmlFor="requestNotes" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
               Special Instructions / Notes
             </label>
             <input
+              id="requestNotes"
+              name="notes"
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Surgery at 9 AM, Platelet concentrate preferred"
+              placeholder="e.g. Trauma emergency, O- or O+ needed immediately"
               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
             />
           </div>
@@ -395,7 +459,7 @@ export default function RequestBlood({ user, setView, onToast, isSimulator = fal
         <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-red-900 font-semibold">
             <Users className="w-4 h-4 text-red-600" />
-            <span>Eligible donors currently ready in {district}:</span>
+            <span>Eligible donors currently ready in {district}, {state}:</span>
           </div>
           <span className="text-xs font-black px-2.5 py-1 bg-white text-red-800 rounded-xl border border-red-200">
             {currentEligible.length} Donors Found
