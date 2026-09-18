@@ -1,5 +1,5 @@
 import type { BloodBank, BloodGroup, BloodRequest, CurrentUser, Donor, DonorBadge, Match, SentEmailAlert, EmailOtpRecord, PhoneOtpRecord, SmsOtpRecord } from './types'
-import { supabase, isSupabaseConfigured } from './supabase'
+import { supabase, isSupabaseConfigured, broadcastEmergencyRequest } from './supabase'
 import {
   INDIAN_STATES_AND_DISTRICTS,
   getDistrictsForState,
@@ -693,13 +693,8 @@ export const store = {
           matches: req.matches,
         })
 
-        // Broadcast to Supabase Realtime channel
-        const broadcastChannel = supabase.channel('bloodlink-emergency-broadcast')
-        broadcastChannel.send({
-          type: 'broadcast',
-          event: 'sos_alert',
-          payload: req,
-        })
+        // Broadcast to Supabase Realtime channel for cross-device alerts
+        broadcastEmergencyRequest(req)
       } catch (e) {
         console.warn('Supabase addRequest error:', e)
       }

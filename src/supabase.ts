@@ -51,3 +51,20 @@ export const supabase = isSupabaseConfigured
         autoRefreshToken: false,
       }
     })
+
+export const REALTIME_CHANNEL_NAME = 'bloodlink-realtime-global'
+
+export function broadcastEmergencyRequest(req: any) {
+  if (isSupabaseConfigured) {
+    try {
+      const channel = supabase.channel(REALTIME_CHANNEL_NAME)
+      channel.send({
+        type: 'broadcast',
+        event: 'sos_alert',
+        payload: req,
+      })
+    } catch (e) {
+      console.warn('Realtime broadcast error:', e)
+    }
+  }
+}

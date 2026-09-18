@@ -17,8 +17,9 @@ import {
 } from 'lucide-react'
 import type { CurrentUser, ToastMessage, View, BloodRequest, BloodGroup } from './types'
 import { store, seedIfEmpty, COMPATIBLE_DONORS, playEmergencyAlarm, playNotificationSound } from './store'
-import { supabase, isSupabaseConfigured } from './supabase'
+import { supabase, isSupabaseConfigured, REALTIME_CHANNEL_NAME } from './supabase'
 import { DEFAULT_STATE, DEFAULT_DISTRICT } from './data/indianLocations'
+import { requestNotificationPermission, sendBrowserNotification } from './utils/browserNotifications'
 import Navbar from './components/Navbar'
 import ToastContainer from './components/ToastContainer'
 
@@ -36,6 +37,7 @@ const BloodBanks = lazy(() => import('./views/BloodBanks'))
 const EmergencySOSModal = lazy(() => import('./components/EmergencySOSModal'))
 const EditProfileModal = lazy(() => import('./components/EditProfileModal'))
 const InstallAppBanner = lazy(() => import('./components/InstallAppBanner'))
+const IncomingRequestAlertModal = lazy(() => import('./components/IncomingRequestAlertModal'))
 
 function LoadingFallback() {
   return (
@@ -56,6 +58,7 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([])
   const [showSOSModal, setShowSOSModal] = useState(false)
   const [showEditProfileModal, setShowEditProfileModal] = useState(false)
+  const [incomingAlertRequest, setIncomingAlertRequest] = useState<BloodRequest | null>(null)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [, forceUpdate] = useState(0)
 
@@ -80,17 +83,45 @@ export default function App() {
     const compatible = COMPATIBLE_DONORS[req.bloodGroup as BloodGroup] || []
     const isCompatible = compatible.includes(myBlood as BloodGroup)
 
-    if (isCompatible || req.urgency === 'critical') {
+    const userDistrict = (currentUser.district || '').trim().toLowerCase()
+    const reqDistrict = (req.district || '').trim().toLowerCase()
+    const userState = (currentUser.state || '').trim().toLowerCase()
+    const reqState = (req.state || '').trim().toLowerCase()
+
+    const isSameDistrict = Boolean(userDistrict && reqDistrict && (userDistrict === reqDistrict || userDistrict.includes(reqDistrict) || reqDistrict.includes(userDistrict)))
+    const isSameState = Boolean(userState && reqState && userState === reqState)
+    const isMatchingArea = isSameDistrict || isSameState || !reqDistrict || !userDistrict
+
+    // Notify if user is in same district/area and compatible, or if critical emergency
+    if ((isMatchingArea && isCompatible) || isSameDistrict || req.urgency === 'critical') {
       try {
-        playEmergencyAlarm()
+        if (req.urgency === 'critical') {
+          playEmergencyAlarm()
+        } else {
+          playNotificationSound()
+        }
       } catch (audioErr) {
         console.warn('Audio play notice:', audioErr)
       }
 
+      // Native Browser & Mobile Lockscreen Notification
+      sendBrowserNotification(
+        req.urgency === 'critical'
+          ? `🚨 CRITICAL SOS: ${req.bloodGroup} Blood in ${req.district}!`
+          : `🩸 ${req.bloodGroup} Blood Needed in ${req.district}!`,
+        {
+          body: `${req.patientName} needs ${req.unitsNeeded || 1} unit(s) at ${req.hospital}. Needed: ${req.requiredBy || 'ASAP'}. Tap to view.`,
+          requireInteraction: true,
+        }
+      )
+
+      // Pop up interactive alert modal
+      setIncomingAlertRequest(req)
+
       addToast(
-        'error',
-        req.urgency === 'critical' ? '🚨 CRITICAL SOS EMERGENCY ALERT!' : '🩸 Urgent Blood Request',
-        `Urgent ${req.bloodGroup} needed for ${req.patientName} at ${req.hospital} (${req.district || 'Nearby'})!`
+        req.urgency === 'critical' ? 'error' : 'warning',
+        req.urgency === 'critical' ? '🚨 EMERGENCY BLOOD ALERT IN YOUR AREA!' : `🩸 Blood Request in ${req.district}`,
+        `${req.patientName} needs ${req.bloodGroup} at ${req.hospital} · ${req.requiredBy || 'Needed urgently'}`
       )
     }
 
@@ -99,6 +130,7 @@ export default function App() {
 
   useEffect(() => {
     seedIfEmpty()
+    requestNotificationPermission()
 
     // 1. Initial background sync
     store.syncFromSupabase().then(() => {
@@ -110,7 +142,7 @@ export default function App() {
     if (isSupabaseConfigured) {
       try {
         sbChannel = supabase
-          .channel('bloodlink-realtime-global')
+          .channel(REALTIME_CHANNEL_NAME)
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'blood_requests' },
@@ -537,6 +569,18 @@ export default function App() {
               refresh()
             }}
             onToast={addToast}
+          />
+        )}
+
+        {incomingAlertRequest && (
+          <IncomingRequestAlertModal
+            request={incomingAlertRequest}
+            onAccept={(req) => {
+              setIncomingAlertRequest(null)
+              setView('notifications')
+              addToast('info', 'Opening Request', `Viewing details for ${req.patientName}.`)
+            }}
+            onDismiss={() => setIncomingAlertRequest(null)}
           />
         )}
       </Suspense>
