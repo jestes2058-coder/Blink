@@ -1,4 +1,6 @@
 {
+  "title": "BlInk App",
+  "name": "BlInk App",
   "description": "Connect eligible blood donors with nearby requests by matching blood type, location, and donation intervals while ensuring donor privacy and consent.",
   "robots": {
     "index": true

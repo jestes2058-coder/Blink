@@ -1,6 +1,6 @@
 {
-  "name": "BloodLink - Blood Donor Matching App",
-  "short_name": "BloodLink",
+  "name": "BlInk App - Blood Donor Matching App",
+  "short_name": "BlInk App",
   "description": "District-based emergency blood donor matching application connecting patients with verified local donors.",
   "id": "/",
   "start_url": "/",
