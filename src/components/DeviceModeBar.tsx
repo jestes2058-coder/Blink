@@ -1,19 +1,28 @@
-import { Monitor, Smartphone, Download, Sparkles, Database } from 'lucide-react'
-import { isSupabaseConfigured } from '../supabase'
+import { Monitor, Smartphone, Download, Sparkles, Database } from "lucide-react"
+
+import { isSupabaseConfigured } from "../supabase"
 
 interface Props {
-  deviceMode: 'web' | 'mobile'
-  onToggleMode: (mode: 'web' | 'mobile') => void
+  deviceMode: "web" | "mobile"
+
+  onToggleMode: (mode: "web" | "mobile") => void
+
   onInstallClick: () => void
+
   onOpenDBModal: () => void
+
   canInstall: boolean
 }
 
 export default function DeviceModeBar({
   deviceMode,
+
   onToggleMode,
+
   onInstallClick,
+
   onOpenDBModal,
+
   canInstall,
 }: Props) {
   return (
@@ -26,11 +35,11 @@ export default function DeviceModeBar({
 
           <div className="inline-flex rounded-xl bg-gray-800 p-0.5 border border-gray-700">
             <button
-              onClick={() => onToggleMode('web')}
+              onClick={() => onToggleMode("web")}
               className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 transition ${
-                deviceMode === 'web'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-white'
+                deviceMode === "web"
+                  ? "bg-red-600 text-white shadow-sm"
+                  : "text-gray-400 hover:text-white"
               }`}
             >
               <Monitor className="w-3.5 h-3.5" />
@@ -38,11 +47,11 @@ export default function DeviceModeBar({
             </button>
 
             <button
-              onClick={() => onToggleMode('mobile')}
+              onClick={() => onToggleMode("mobile")}
               className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 transition ${
-                deviceMode === 'mobile'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-white'
+                deviceMode === "mobile"
+                  ? "bg-red-600 text-white shadow-sm"
+                  : "text-gray-400 hover:text-white"
               }`}
             >
               <Smartphone className="w-3.5 h-3.5" />
@@ -57,8 +66,16 @@ export default function DeviceModeBar({
             onClick={onOpenDBModal}
             className="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-bold rounded-lg flex items-center gap-1.5 transition border border-gray-700"
           >
-            <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured ? 'text-emerald-400' : 'text-blue-400'}`} />
-            <span>{isSupabaseConfigured ? 'Cloud Database: Connected' : 'Setup Cloud Database'}</span>
+            <Database
+              className={`w-3.5 h-3.5 ${
+                isSupabaseConfigured ? "text-emerald-400" : "text-blue-400"
+              }`}
+            />
+            <span>
+              {isSupabaseConfigured
+                ? "Cloud Database: Connected"
+                : "Setup Cloud Database"}
+            </span>
           </button>
 
           {canInstall && (

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from "react"
 import {
   Users,
   Search,
@@ -12,13 +12,24 @@ import {
   Phone,
   ShieldCheck,
   Droplet,
-} from 'lucide-react'
-import type { BloodGroup, CurrentUser, Donor, View } from '../types'
-import { BLOOD_GROUPS, store, canDonate, daysSinceLastDonation, nextEligibleDate, getDonorBadge } from '../store'
-import { INDIAN_STATES_AND_DISTRICTS, getDistrictsForState, DEFAULT_STATE } from '../data/indianLocations'
-import BloodBadge from '../components/BloodBadge'
-import DonorCardModal from '../components/DonorCardModal'
-import UserAvatar from '../components/UserAvatar'
+} from "lucide-react"
+import type { BloodGroup, CurrentUser, Donor, View } from "../types"
+import {
+  BLOOD_GROUPS,
+  store,
+  canDonate,
+  daysSinceLastDonation,
+  nextEligibleDate,
+  getDonorBadge,
+} from "../store"
+import {
+  INDIAN_STATES_AND_DISTRICTS,
+  getDistrictsForState,
+  DEFAULT_STATE,
+} from "../data/indianLocations"
+import BloodBadge from "../components/BloodBadge"
+import DonorCardModal from "../components/DonorCardModal"
+import UserAvatar from "../components/UserAvatar"
 
 interface Props {
   user: CurrentUser
@@ -27,36 +38,51 @@ interface Props {
 }
 
 export default function DonorsDirectory({ user, setView }: Props) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedBloodGroup, setSelectedBloodGroup] = useState<BloodGroup | 'ALL'>('ALL')
-  const [selectedState, setSelectedState] = useState<string>('ALL')
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL')
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedBloodGroup, setSelectedBloodGroup] =
+    useState<BloodGroup | "ALL">("ALL")
+  const [selectedState, setSelectedState] = useState<string>("ALL")
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("ALL")
   const [filterEligibleOnly, setFilterEligibleOnly] = useState(false)
   const [selectedDonorCard, setSelectedDonorCard] = useState<Donor | null>(null)
 
   const donors = store.getDonors()
 
-  const availableDistricts = selectedState !== 'ALL' ? getDistrictsForState(selectedState) : []
+  const availableDistricts =
+    selectedState !== "ALL" ? getDistrictsForState(selectedState) : []
 
   function handleStateFilterChange(newState: string) {
     setSelectedState(newState)
-    setSelectedDistrict('ALL')
+    setSelectedDistrict("ALL")
   }
 
   const filteredDonors = donors.filter((donor) => {
     const matchesSearch =
       donor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       donor.district.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (donor.state && donor.state.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (donor.state &&
+        donor.state.toLowerCase().includes(searchQuery.toLowerCase())) ||
       donor.bloodGroup.toLowerCase().includes(searchQuery.toLowerCase())
 
-    const matchesBlood = selectedBloodGroup === 'ALL' || donor.bloodGroup === selectedBloodGroup
-    const matchesState = selectedState === 'ALL' || (donor.state ? donor.state === selectedState : selectedState === DEFAULT_STATE)
-    const matchesDistrict = selectedDistrict === 'ALL' || donor.district === selectedDistrict
+    const matchesBlood =
+      selectedBloodGroup === "ALL" || donor.bloodGroup === selectedBloodGroup
+    const matchesState =
+      selectedState === "ALL" ||
+      (donor.state
+        ? donor.state === selectedState
+        : selectedState === DEFAULT_STATE)
+    const matchesDistrict =
+      selectedDistrict === "ALL" || donor.district === selectedDistrict
     const isEligible = canDonate(donor)
     const matchesEligible = !filterEligibleOnly || isEligible
 
-    return matchesSearch && matchesBlood && matchesState && matchesDistrict && matchesEligible
+    return (
+      matchesSearch &&
+      matchesBlood &&
+      matchesState &&
+      matchesDistrict &&
+      matchesEligible
+    )
   })
 
   return (
@@ -72,11 +98,16 @@ export default function DonorsDirectory({ user, setView }: Props) {
               Community Network
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          <h1
+            className="text-2xl sm:text-3xl font-bold tracking-tight mb-2"
+            style={{ fontFamily: "'DM Serif Display', serif" }}
+          >
             Registered Volunteer Donors
           </h1>
           <p className="text-red-100 text-xs sm:text-sm leading-relaxed">
-            Search active donors by Indian state, district, and blood group. Direct contact details remain protected and are securely shared upon request confirmation.
+            Search active donors by Indian state, district, and blood group.
+            Direct contact details remain protected and are securely shared upon
+            request confirmation.
           </p>
         </div>
 
@@ -89,7 +120,9 @@ export default function DonorsDirectory({ user, setView }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Search box */}
           <div className="relative">
-            <label htmlFor="searchDonorQuery" className="sr-only">Search Donors</label>
+            <label htmlFor="searchDonorQuery" className="sr-only">
+              Search Donors
+            </label>
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               id="searchDonorQuery"
@@ -104,7 +137,9 @@ export default function DonorsDirectory({ user, setView }: Props) {
 
           {/* State Select */}
           <div>
-            <label htmlFor="donorFilterState" className="sr-only">Filter by State</label>
+            <label htmlFor="donorFilterState" className="sr-only">
+              Filter by State
+            </label>
             <select
               id="donorFilterState"
               name="state"
@@ -114,27 +149,35 @@ export default function DonorsDirectory({ user, setView }: Props) {
             >
               <option value="ALL">All States (India)</option>
               {INDIAN_STATES_AND_DISTRICTS.map((s) => (
-                <option key={s.state} value={s.state}>{s.state}</option>
+                <option key={s.state} value={s.state}>
+                  {s.state}
+                </option>
               ))}
             </select>
           </div>
 
           {/* District Select */}
           <div>
-            <label htmlFor="donorFilterDistrict" className="sr-only">Filter by District</label>
+            <label htmlFor="donorFilterDistrict" className="sr-only">
+              Filter by District
+            </label>
             <select
               id="donorFilterDistrict"
               name="district"
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
-              disabled={selectedState === 'ALL'}
+              disabled={selectedState === "ALL"}
               className="w-full py-2.5 sm:py-3 px-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition font-medium disabled:opacity-50"
             >
               <option value="ALL">
-                {selectedState === 'ALL' ? 'Select State First' : `All Districts (${availableDistricts.length})`}
+                {selectedState === "ALL"
+                  ? "Select State First"
+                  : `All Districts (${availableDistricts.length})`}
               </option>
               {availableDistricts.map((d) => (
-                <option key={d} value={d}>{d}</option>
+                <option key={d} value={d}>
+                  {d}
+                </option>
               ))}
             </select>
           </div>
@@ -145,12 +188,14 @@ export default function DonorsDirectory({ user, setView }: Props) {
             onClick={() => setFilterEligibleOnly(!filterEligibleOnly)}
             className={`py-2.5 sm:py-3 px-3 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 border transition ${
               filterEligibleOnly
-                ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
-                : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
+                ? "bg-emerald-700 text-white border-emerald-700 shadow-sm"
+                : "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
             }`}
           >
             <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">{filterEligibleOnly ? 'Ready Donors Only' : 'Show Ready Only'}</span>
+            <span className="truncate">
+              {filterEligibleOnly ? "Ready Donors Only" : "Show Ready Only"}
+            </span>
           </button>
         </div>
 
@@ -160,11 +205,11 @@ export default function DonorsDirectory({ user, setView }: Props) {
             Blood Type:
           </span>
           <button
-            onClick={() => setSelectedBloodGroup('ALL')}
+            onClick={() => setSelectedBloodGroup("ALL")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              selectedBloodGroup === 'ALL'
-                ? 'bg-red-700 text-white shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700'
+              selectedBloodGroup === "ALL"
+                ? "bg-red-700 text-white shadow-sm"
+                : "bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700"
             }`}
           >
             All Types
@@ -177,8 +222,8 @@ export default function DonorsDirectory({ user, setView }: Props) {
                 onClick={() => setSelectedBloodGroup(g)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                   isSel
-                    ? 'bg-red-700 text-white shadow-sm ring-1 ring-red-400'
-                    : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700'
+                    ? "bg-red-700 text-white shadow-sm ring-1 ring-red-400"
+                    : "bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700"
                 }`}
               >
                 {g}
@@ -194,22 +239,26 @@ export default function DonorsDirectory({ user, setView }: Props) {
           Showing {filteredDonors.length} of {donors.length} Donors
         </p>
         <button
-          onClick={() => setView('request-blood')}
+          onClick={() => setView("request-blood")}
           className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1"
         >
-          <Droplet className="w-3.5 h-3.5 fill-red-600 text-red-600" /> Need Blood? Submit Request →
+          <Droplet className="w-3.5 h-3.5 fill-red-600 text-red-600" /> Need
+          Blood? Submit Request →
         </button>
       </div>
 
       {filteredDonors.length === 0 ? (
         <div className="bg-white rounded-3xl border border-gray-100 p-10 sm:p-12 text-center max-w-md mx-auto shadow-sm space-y-3">
           <Users className="w-12 h-12 text-gray-300 mx-auto" />
-          <h2 className="text-lg font-bold text-gray-800">No Donors Match Your Filter</h2>
+          <h2 className="text-lg font-bold text-gray-800">
+            No Donors Match Your Filter
+          </h2>
           <p className="text-xs text-gray-600">
-            Try choosing a different district or register as a volunteer donor today.
+            Try choosing a different district or register as a volunteer donor
+            today.
           </p>
           <button
-            onClick={() => setView('register-donor')}
+            onClick={() => setView("register-donor")}
             className="px-5 py-2.5 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-xl transition shadow-md"
           >
             Register as Volunteer Donor
@@ -239,10 +288,15 @@ export default function DonorsDirectory({ user, setView }: Props) {
                         bloodGroup={donor.bloodGroup}
                       />
                       <div>
-                        <h2 className="font-bold text-gray-900 text-base">{donor.name}</h2>
+                        <h2 className="font-bold text-gray-900 text-base">
+                          {donor.name}
+                        </h2>
                         <p className="text-xs text-gray-600 flex items-center gap-1 mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-                          <span>{donor.district}{donor.state ? `, ${donor.state}` : ''}</span>
+                          <span>
+                            {donor.district}
+                            {donor.state ? `, ${donor.state}` : ""}
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -252,18 +306,28 @@ export default function DonorsDirectory({ user, setView }: Props) {
 
                   {/* Lifesaver Badge Pill if any */}
                   {badge && (
-                    <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold" style={{ backgroundColor: badge.bgLight, color: badge.color }}>
+                    <div
+                      className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold"
+                      style={{
+                        backgroundColor: badge.bgLight,
+                        color: badge.color,
+                      }}
+                    >
                       <Award className="w-3.5 h-3.5" />
-                      <span>{badge.title} ({donor.totalDonations} donations)</span>
+                      <span>
+                        {badge.title} ({donor.totalDonations} donations)
+                      </span>
                     </div>
                   )}
 
                   {/* Status Indicator */}
-                  <div className={`p-3 rounded-2xl border text-xs mb-4 ${
-                    isEligible
-                      ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
-                      : 'bg-amber-50/80 border-amber-200 text-amber-900'
-                  }`}>
+                  <div
+                    className={`p-3 rounded-2xl border text-xs mb-4 ${
+                      isEligible
+                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                        : "bg-amber-50/80 border-amber-200 text-amber-900"
+                    }`}
+                  >
                     <div className="flex items-center gap-2">
                       {isEligible ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -272,12 +336,18 @@ export default function DonorsDirectory({ user, setView }: Props) {
                       )}
                       <div>
                         <p className="font-bold">
-                          {isEligible ? 'Eligible & Ready to Donate' : 'Cooldown Interval'}
+                          {isEligible
+                            ? "Eligible & Ready to Donate"
+                            : "Cooldown Interval"}
                         </p>
                         <p className="text-[11px] opacity-80">
                           {isEligible
-                            ? daysSince !== null ? `Last donated ${daysSince} days ago` : 'Available volunteer'
-                            : nextDate ? `Eligible from ${nextDate.toLocaleDateString()}` : 'Interval active'}
+                            ? daysSince !== null
+                              ? `Last donated ${daysSince} days ago`
+                              : "Available volunteer"
+                            : nextDate
+                              ? `Eligible from ${nextDate.toLocaleDateString()}`
+                              : "Interval active"}
                         </p>
                       </div>
                     </div>
@@ -290,10 +360,11 @@ export default function DonorsDirectory({ user, setView }: Props) {
                     onClick={() => setSelectedDonorCard(donor)}
                     className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1"
                   >
-                    <Award className="w-3.5 h-3.5 text-red-600" /> View Digital ID
+                    <Award className="w-3.5 h-3.5 text-red-600" /> View Digital
+                    ID
                   </button>
                   <button
-                    onClick={() => setView('request-blood')}
+                    onClick={() => setView("request-blood")}
                     className="flex-1 py-2.5 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-sm"
                   >
                     <Droplet className="w-3.5 h-3.5" /> Request Blood
@@ -307,7 +378,10 @@ export default function DonorsDirectory({ user, setView }: Props) {
 
       {/* Digital Donor Modal */}
       {selectedDonorCard && (
-        <DonorCardModal donor={selectedDonorCard} onClose={() => setSelectedDonorCard(null)} />
+        <DonorCardModal
+          donor={selectedDonorCard}
+          onClose={() => setSelectedDonorCard(null)}
+        />
       )}
     </div>
   )

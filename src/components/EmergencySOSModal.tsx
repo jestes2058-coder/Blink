@@ -1,9 +1,21 @@
-import { useState } from 'react'
-import { X, Flame, AlertCircle, Droplet, MapPin, Building2, ShieldAlert } from 'lucide-react'
-import type { BloodGroup, CurrentUser } from '../types'
-import { BLOOD_GROUPS, store } from '../store'
-import { INDIAN_STATES_AND_DISTRICTS, getDistrictsForState, DEFAULT_STATE } from '../data/indianLocations'
-import BloodBadge from './BloodBadge'
+import { useState } from "react"
+import {
+  X,
+  Flame,
+  AlertCircle,
+  Droplet,
+  MapPin,
+  Building2,
+  ShieldAlert,
+} from "lucide-react"
+import type { BloodGroup, CurrentUser } from "../types"
+import { BLOOD_GROUPS, store } from "../store"
+import {
+  INDIAN_STATES_AND_DISTRICTS,
+  getDistrictsForState,
+  DEFAULT_STATE,
+} from "../data/indianLocations"
+import BloodBadge from "./BloodBadge"
 
 interface Props {
   user: CurrentUser
@@ -12,12 +24,12 @@ interface Props {
 }
 
 export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
-  const [patientName, setPatientName] = useState('')
-  const [bloodGroup, setBloodGroup] = useState<BloodGroup>('O-')
+  const [patientName, setPatientName] = useState("")
+  const [bloodGroup, setBloodGroup] = useState<BloodGroup>("O-")
   const [state, setState] = useState(user.state || DEFAULT_STATE)
-  const [district, setDistrict] = useState(user.district || 'Ernakulam')
-  const [hospital, setHospital] = useState('')
-  const [error, setError] = useState('')
+  const [district, setDistrict] = useState(user.district || "Ernakulam")
+  const [hospital, setHospital] = useState("")
+  const [error, setError] = useState("")
 
   const availableDistricts = getDistrictsForState(state)
 
@@ -25,7 +37,7 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
     setState(newState)
     const dists = getDistrictsForState(newState)
     if (!dists.includes(district)) {
-      setDistrict(dists[0] || '')
+      setDistrict(dists[0] || "")
     }
   }
 
@@ -33,9 +45,10 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
 
   async function handleTriggerSOS(e: React.FormEvent) {
     e.preventDefault()
-    if (!patientName.trim()) return setError('Please specify the patient name.')
-    if (!hospital.trim()) return setError('Hospital name is required for urgent dispatch.')
-    setError('')
+    if (!patientName.trim()) return setError("Please specify the patient name.")
+    if (!hospital.trim())
+      return setError("Hospital name is required for urgent dispatch.")
+    setError("")
     setIsSubmitting(true)
 
     try {
@@ -48,17 +61,20 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
         bloodGroup,
         state: state.trim(),
         district: district.trim(),
-        urgency: 'critical',
+        urgency: "critical",
         hospital: hospital.trim(),
         unitsNeeded: 2,
-        requiredBy: '⚡ Immediate / Critical Emergency',
-        notes: '🚨 URGENT SOS EMERGENCY: Critical transfusion needed immediately.',
+        requiredBy: "⚡ Immediate / Critical Emergency",
+        notes:
+          "🚨 URGENT SOS EMERGENCY: Critical transfusion needed immediately.",
       })
 
       onSuccess()
       onClose()
     } catch (err: any) {
-      setError(err?.message || 'Failed to dispatch SOS alert. Please try again.')
+      setError(
+        err?.message || "Failed to dispatch SOS alert. Please try again.",
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -86,11 +102,15 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
             </span>
           </div>
 
-          <h3 className="text-xl sm:text-2xl font-black tracking-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          <h3
+            className="text-xl sm:text-2xl font-black tracking-tight"
+            style={{ fontFamily: "'DM Serif Display', serif" }}
+          >
             Trigger Urgent Emergency SOS
           </h3>
           <p className="text-xs text-red-100 mt-1">
-            Instantly alerts all eligible donors in {district}, {state} with emergency siren alarm & notifications.
+            Instantly alerts all eligible donors in {district}, {state} with
+            emergency siren alarm & notifications.
           </p>
         </div>
 
@@ -103,7 +123,10 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
           )}
 
           <div>
-            <label htmlFor="sosPatientName" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+            <label
+              htmlFor="sosPatientName"
+              className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5"
+            >
               Patient Full Name *
             </label>
             <input
@@ -132,8 +155,8 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
                   onClick={() => setBloodGroup(g)}
                   className={`py-2 rounded-xl text-xs font-black border-2 transition ${
                     bloodGroup === g
-                      ? 'bg-red-700 border-red-700 text-white shadow-md'
-                      : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
+                      ? "bg-red-700 border-red-700 text-white shadow-md"
+                      : "bg-white border-gray-200 text-gray-700 hover:border-red-300"
                   }`}
                 >
                   {g}
@@ -144,7 +167,10 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="sosState" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              <label
+                htmlFor="sosState"
+                className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5"
+              >
                 State (India) *
               </label>
               <select
@@ -155,13 +181,18 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
                 className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:ring-2 focus:ring-red-400 focus:outline-none font-medium"
               >
                 {INDIAN_STATES_AND_DISTRICTS.map((s) => (
-                  <option key={s.state} value={s.state}>{s.state}</option>
+                  <option key={s.state} value={s.state}>
+                    {s.state}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label htmlFor="sosDistrict" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              <label
+                htmlFor="sosDistrict"
+                className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5"
+              >
                 District ({state}) *
               </label>
               <select
@@ -172,14 +203,19 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
                 className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:ring-2 focus:ring-red-400 focus:outline-none font-medium"
               >
                 {availableDistricts.map((d) => (
-                  <option key={d} value={d}>{d}</option>
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label htmlFor="sosHospital" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+            <label
+              htmlFor="sosHospital"
+              className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5"
+            >
               Hospital / ICU Location *
             </label>
             <input

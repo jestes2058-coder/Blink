@@ -1,18 +1,24 @@
-import React from 'react'
-import { Wifi, Battery, Signal, Sparkles } from 'lucide-react'
+import React from "react"
+import { Wifi, Battery, Signal, Sparkles } from "lucide-react"
 
 interface Props {
   children: React.ReactNode
   isMobileSimulator: boolean
 }
 
-export default function MobileSimulatorFrame({ children, isMobileSimulator }: Props) {
+export default function MobileSimulatorFrame({
+  children,
+  isMobileSimulator,
+}: Props) {
   if (!isMobileSimulator) {
     return <>{children}</>
   }
 
   const now = new Date()
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const timeStr = now.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 
   return (
     <div className="min-h-screen bg-gray-950 py-4 px-2 sm:px-6 flex flex-col items-center justify-center">
@@ -26,10 +32,11 @@ export default function MobileSimulatorFrame({ children, isMobileSimulator }: Pr
       <div className="w-full max-w-[400px] h-[840px] max-h-[92vh] bg-black rounded-[48px] p-3 shadow-[0_25px_70px_rgba(0,0,0,0.8)] border-4 border-gray-800 flex flex-col relative overflow-hidden">
         {/* Inner Screen */}
         <div className="w-full h-full bg-[#FFF8F8] rounded-[38px] overflow-hidden flex flex-col relative border border-gray-900/10">
-          
           {/* iOS Top Status Bar & Dynamic Island */}
           <div className="h-10 bg-white/95 backdrop-blur-md px-6 flex items-center justify-between z-50 flex-shrink-0 text-gray-900 border-b border-red-50">
-            <span className="text-[12px] font-bold tracking-tight">{timeStr}</span>
+            <span className="text-[12px] font-bold tracking-tight">
+              {timeStr}
+            </span>
 
             {/* Dynamic Island Pill */}
             <div className="w-24 h-4 bg-black rounded-full mx-auto" />

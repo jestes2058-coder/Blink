@@ -3,18 +3,18 @@
  */
 
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
+  if (typeof window === "undefined" || !("Notification" in window)) {
     return false
   }
 
-  if (Notification.permission === 'granted') {
+  if (Notification.permission === "granted") {
     return true
   }
 
-  if (Notification.permission !== 'denied') {
+  if (Notification.permission !== "denied") {
     try {
       const permission = await Notification.requestPermission()
-      return permission === 'granted'
+      return permission === "granted"
     } catch {
       return false
     }
@@ -32,14 +32,14 @@ export function sendBrowserNotification(
     tag?: string
     data?: any
     requireInteraction?: boolean
-  }
+  },
 ) {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
+  if (typeof window === "undefined" || !("Notification" in window)) {
     return
   }
 
   // Trigger mobile vibration pattern if supported
-  if ('vibrate' in navigator) {
+  if ("vibrate" in navigator) {
     try {
       navigator.vibrate([300, 150, 300, 150, 400])
     } catch {
@@ -47,11 +47,11 @@ export function sendBrowserNotification(
     }
   }
 
-  if (Notification.permission === 'granted') {
+  if (Notification.permission === "granted") {
     try {
       const notification = new Notification(title, {
-        icon: '/favicon.svg',
-        badge: '/favicon.svg',
+        icon: "/favicon.svg",
+        badge: "/favicon.svg",
         requireInteraction: options?.requireInteraction ?? true,
         ...options,
       })
@@ -64,7 +64,7 @@ export function sendBrowserNotification(
         notification.close()
       }
     } catch (err) {
-      console.warn('Native notification display error:', err)
+      console.warn("Native notification display error:", err)
     }
   }
 }

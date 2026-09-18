@@ -1,43 +1,88 @@
-import { useState } from 'react'
-import { X, Database, CheckCircle2, AlertCircle, Copy, Check, Sparkles, RefreshCw, Key, Globe } from 'lucide-react'
-import { isSupabaseConfigured } from '../supabase'
-import { store } from '../store'
+import { useState } from "react"
+
+import {
+  X,
+  Database,
+  CheckCircle2,
+  AlertCircle,
+  Copy,
+  Check,
+  Sparkles,
+  RefreshCw,
+  Key,
+  Globe,
+} from "lucide-react"
+
+import { isSupabaseConfigured } from "../supabase"
+
+import { store } from "../store"
 
 interface Props {
   onClose: () => void
+
   onSaved: () => void
 }
 
 export default function SupabaseConfigModal({ onClose, onSaved }: Props) {
-  const [url, setUrl] = useState(localStorage.getItem('bd_custom_sb_url') || import.meta.env.VITE_SUPABASE_URL || '')
-  const [key, setKey] = useState(localStorage.getItem('bd_custom_sb_key') || import.meta.env.VITE_SUPABASE_ANON_KEY || '')
+  const [url, setUrl] = useState(
+    localStorage.getItem("bd_custom_sb_url") ||
+      import.meta.env.VITE_SUPABASE_URL ||
+      "",
+  )
+
+  const [key, setKey] = useState(
+    localStorage.getItem("bd_custom_sb_key") ||
+      import.meta.env.VITE_SUPABASE_ANON_KEY ||
+      "",
+  )
+
   const [testing, setTesting] = useState(false)
-  const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const [statusMsg, setStatusMsg] = useState<{
+    type: "success" | "error"
+    text: string
+  } | null>(null)
+
   const [copiedSchema, setCopiedSchema] = useState(false)
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+
     if (!url.trim() || !key.trim()) {
-      setStatusMsg({ type: 'error', text: 'Please provide both Project URL and Public Anon Key.' })
+      setStatusMsg({
+        type: "error",
+        text: "Please provide both Project URL and Public Anon Key.",
+      })
+
       return
     }
 
     setTesting(true)
+
     setStatusMsg(null)
 
     try {
-      localStorage.setItem('bd_custom_sb_url', url.trim())
-      localStorage.setItem('bd_custom_sb_key', key.trim())
-      
-      setStatusMsg({ type: 'success', text: '✅ Supabase credentials saved! Syncing tables...' })
+      localStorage.setItem("bd_custom_sb_url", url.trim())
+
+      localStorage.setItem("bd_custom_sb_key", key.trim())
+
+      setStatusMsg({
+        type: "success",
+        text: "✅ Supabase credentials saved! Syncing tables...",
+      })
+
       await store.syncFromSupabase()
-      
+
       setTimeout(() => {
         onSaved()
+
         onClose()
       }, 1200)
     } catch (err: any) {
-      setStatusMsg({ type: 'error', text: err?.message || 'Failed to connect. Please check credentials.' })
+      setStatusMsg({
+        type: "error",
+        text: err?.message || "Failed to connect. Please check credentials.",
+      })
     } finally {
       setTesting(false)
     }
@@ -99,7 +144,9 @@ CREATE POLICY "Public insert requests" ON public.blood_requests FOR INSERT WITH 
 CREATE POLICY "Public update requests" ON public.blood_requests FOR UPDATE USING (true);`
 
     navigator.clipboard.writeText(sqlContent)
+
     setCopiedSchema(true)
+
     setTimeout(() => setCopiedSchema(false), 2500)
   }
 
@@ -118,19 +165,32 @@ CREATE POLICY "Public update requests" ON public.blood_requests FOR UPDATE USING
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            <h3
+              className="text-xl font-bold text-gray-900"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
               Cloud & Supabase Data Setup
             </h3>
-            <p className="text-xs text-gray-500">Zero-config automatic storage & cloud sync</p>
+            <p className="text-xs text-gray-500">
+              Zero-config automatic storage & cloud sync
+            </p>
           </div>
         </div>
 
         {/* Current status info */}
         <div className="mb-5 p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${isSupabaseConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500'}`} />
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                isSupabaseConfigured
+                  ? "bg-emerald-500 animate-pulse"
+                  : "bg-blue-500"
+              }`}
+            />
             <span className="font-bold text-gray-800">
-              {isSupabaseConfigured ? 'Connected to Supabase Cloud' : 'Automatic Local Storage Active'}
+              {isSupabaseConfigured
+                ? "Connected to Supabase Cloud"
+                : "Automatic Local Storage Active"}
             </span>
           </div>
           <button
@@ -138,24 +198,40 @@ CREATE POLICY "Public update requests" ON public.blood_requests FOR UPDATE USING
             onClick={handleCopySQL}
             className="px-3 py-1 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition flex items-center gap-1 text-[11px]"
           >
-            {copiedSchema ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedSchema ? 'SQL Copied!' : 'Copy SQL Schema'}</span>
+            {copiedSchema ? (
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+            <span>{copiedSchema ? "SQL Copied!" : "Copy SQL Schema"}</span>
           </button>
         </div>
 
         {statusMsg && (
-          <div className={`mb-4 p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
-            statusMsg.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            {statusMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+          <div
+            className={`mb-4 p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
+              statusMsg.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}
+          >
+            {statusMsg.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            )}
             <span>{statusMsg.text}</span>
           </div>
         )}
 
         <form onSubmit={handleSave} className="space-y-4 text-xs">
           <div>
-            <label htmlFor="supabaseUrlInput" className="block font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-gray-500" /> Supabase Project URL
+            <label
+              htmlFor="supabaseUrlInput"
+              className="block font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5"
+            >
+              <Globe className="w-3.5 h-3.5 text-gray-500" /> Supabase Project
+              URL
             </label>
             <input
               id="supabaseUrlInput"
@@ -169,7 +245,10 @@ CREATE POLICY "Public update requests" ON public.blood_requests FOR UPDATE USING
           </div>
 
           <div>
-            <label htmlFor="supabaseKeyInput" className="block font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5">
+            <label
+              htmlFor="supabaseKeyInput"
+              className="block font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5"
+            >
               <Key className="w-3.5 h-3.5 text-gray-500" /> Public Anon API Key
             </label>
             <input
@@ -189,7 +268,11 @@ CREATE POLICY "Public update requests" ON public.blood_requests FOR UPDATE USING
               disabled={testing}
               className="flex-1 py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {testing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {testing ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
               <span>Save & Connect Cloud Database</span>
             </button>
             <button

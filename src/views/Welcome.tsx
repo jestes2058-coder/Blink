@@ -1,40 +1,67 @@
-import { useState } from 'react'
-import { Heart, Phone, User, Droplet, ShieldCheck, Sparkles, ArrowRight, Zap, Users } from 'lucide-react'
-import type { CurrentUser, View } from '../types'
-import { DEMO_USERS, store } from '../store'
+import { useState } from "react"
+
+import {
+  Heart,
+  Phone,
+  User,
+  Droplet,
+  ShieldCheck,
+  Sparkles,
+  ArrowRight,
+  Zap,
+  Users,
+} from "lucide-react"
+
+import type { CurrentUser, View } from "../types"
+
+import { DEMO_USERS, store } from "../store"
 
 interface Props {
   onLogin: (user: CurrentUser) => void
+
   setView: (v: View) => void
 }
 
 export default function Welcome({ onLogin }: Props) {
-  const [mode, setMode] = useState<'pick' | 'new' | 'returning'>('pick')
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [error, setError] = useState('')
+  const [mode, setMode] = useState<"pick" | "new" | "returning">("pick")
+
+  const [name, setName] = useState("")
+
+  const [phone, setPhone] = useState("")
+
+  const [error, setError] = useState("")
 
   const users = store.getUsers()
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !phone.trim()) return setError('Please enter both name and phone number.')
-    if (phone.replace(/\D/g, '').length < 7) return setError('Please enter a valid phone number (minimum 7 digits).')
-    
-    const existing = users.find(u => u.phone === phone.trim())
+
+    if (!name.trim() || !phone.trim())
+      return setError("Please enter both name and phone number.")
+
+    if (phone.replace(/\D/g, "").length < 7)
+      return setError("Please enter a valid phone number (minimum 7 digits).")
+
+    const existing = users.find((u) => u.phone === phone.trim())
+
     if (existing) {
       store.setCurrentUser(existing)
+
       onLogin(existing)
+
       return
     }
 
     const user = store.addUser(name.trim(), phone.trim())
+
     store.setCurrentUser(user)
+
     onLogin(user)
   }
 
   function handleSelect(user: CurrentUser) {
     store.setCurrentUser(user)
+
     onLogin(user)
   }
 
@@ -47,7 +74,10 @@ export default function Welcome({ onLogin }: Props) {
             <Heart className="w-6 h-6 text-white fill-white" />
           </div>
           <div>
-            <span className="text-2xl font-bold tracking-tight block" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            <span
+              className="text-2xl font-bold tracking-tight block"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
               B-Link
             </span>
             <span className="text-[10px] uppercase font-bold tracking-widest text-red-200">
@@ -71,32 +101,48 @@ export default function Welcome({ onLogin }: Props) {
             <span>Fast, Verified District Matches</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          <h1
+            className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight"
+            style={{ fontFamily: "'DM Serif Display', serif" }}
+          >
             Connecting the right donor to the right patient.
           </h1>
 
           <p className="text-red-100 text-sm sm:text-base leading-relaxed">
-            Intelligent district-based matching without community group spam. Protect your contact privacy while saving lives in critical emergencies.
+            Intelligent district-based matching without community group spam.
+            Protect your contact privacy while saving lives in critical
+            emergencies.
           </p>
 
           <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
             <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-              <span className="text-red-200 font-bold block">100% Volunteer Network</span>
-              <span className="text-white/80">Zero fees, pure community aid</span>
+              <span className="text-red-200 font-bold block">
+                100% Volunteer Network
+              </span>
+              <span className="text-white/80">
+                Zero fees, pure community aid
+              </span>
             </div>
             <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-              <span className="text-red-200 font-bold block">Smart Interval Check</span>
-              <span className="text-white/80">90-day medical cooldown enforced</span>
+              <span className="text-red-200 font-bold block">
+                Smart Interval Check
+              </span>
+              <span className="text-white/80">
+                90-day medical cooldown enforced
+              </span>
             </div>
           </div>
         </div>
 
         {/* Right Interaction Card */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 text-gray-900 shadow-2xl border border-red-100">
-          {mode === 'pick' && (
+          {mode === "pick" && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
+                <h2
+                  className="text-2xl font-bold text-gray-900"
+                  style={{ fontFamily: "'DM Serif Display', serif" }}
+                >
                   Get Started
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
@@ -126,7 +172,9 @@ export default function Welcome({ onLogin }: Props) {
                           <span className="font-bold text-sm text-gray-900 group-hover:text-red-800 transition">
                             {demo.name}
                           </span>
-                          <span className="block text-[11px] text-gray-500">{demo.roleDesc}</span>
+                          <span className="block text-[11px] text-gray-500">
+                            {demo.roleDesc}
+                          </span>
                         </div>
                       </div>
                       <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-red-700 group-hover:translate-x-0.5 transition-transform" />
@@ -137,7 +185,7 @@ export default function Welcome({ onLogin }: Props) {
 
               <div className="pt-2 border-t border-gray-100 space-y-2.5">
                 <button
-                  onClick={() => setMode('new')}
+                  onClick={() => setMode("new")}
                   className="w-full py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-sm rounded-2xl shadow-lg shadow-red-200 transition"
                 >
                   Create Custom User Profile
@@ -145,7 +193,7 @@ export default function Welcome({ onLogin }: Props) {
 
                 {users.length > 0 && (
                   <button
-                    onClick={() => setMode('returning')}
+                    onClick={() => setMode("returning")}
                     className="w-full py-3 border-2 border-gray-200 hover:border-red-300 text-gray-700 font-bold text-xs rounded-2xl transition"
                   >
                     Select From Existing Stored Users ({users.length})
@@ -155,18 +203,24 @@ export default function Welcome({ onLogin }: Props) {
             </div>
           )}
 
-          {mode === 'new' && (
+          {mode === "new" && (
             <form onSubmit={handleCreate} className="space-y-4">
               <button
                 type="button"
-                onClick={() => { setMode('pick'); setError('') }}
+                onClick={() => {
+                  setMode("pick")
+                  setError("")
+                }}
                 className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1"
               >
                 ← Back to Personas
               </button>
 
               <div>
-                <h2 className="text-xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
+                <h2
+                  className="text-xl font-bold text-gray-900"
+                  style={{ fontFamily: "'DM Serif Display', serif" }}
+                >
                   Create Custom Profile
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
@@ -181,7 +235,10 @@ export default function Welcome({ onLogin }: Props) {
               )}
 
               <div>
-                <label htmlFor="welcomeName" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label
+                  htmlFor="welcomeName"
+                  className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5"
+                >
                   Full Name
                 </label>
                 <div className="relative">
@@ -201,7 +258,10 @@ export default function Welcome({ onLogin }: Props) {
               </div>
 
               <div>
-                <label htmlFor="welcomePhone" className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label
+                  htmlFor="welcomePhone"
+                  className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5"
+                >
                   Phone Number
                 </label>
                 <div className="relative">
@@ -229,17 +289,23 @@ export default function Welcome({ onLogin }: Props) {
             </form>
           )}
 
-          {mode === 'returning' && (
+          {mode === "returning" && (
             <div className="space-y-4">
               <button
                 type="button"
-                onClick={() => { setMode('pick'); setError('') }}
+                onClick={() => {
+                  setMode("pick")
+                  setError("")
+                }}
                 className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1"
               >
                 ← Back to Personas
               </button>
 
-              <h2 className="text-xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
+              <h2
+                className="text-xl font-bold text-gray-900"
+                style={{ fontFamily: "'DM Serif Display', serif" }}
+              >
                 Select User Profile
               </h2>
 
@@ -251,7 +317,9 @@ export default function Welcome({ onLogin }: Props) {
                     className="w-full p-3 rounded-2xl border border-gray-100 hover:border-red-300 hover:bg-red-50/50 transition text-left flex items-center justify-between"
                   >
                     <div>
-                      <p className="font-bold text-sm text-gray-900">{u.name}</p>
+                      <p className="font-bold text-sm text-gray-900">
+                        {u.name}
+                      </p>
                       <p className="text-xs text-gray-400">{u.phone}</p>
                     </div>
                     <ArrowRight className="w-4 h-4 text-gray-400" />
@@ -265,7 +333,8 @@ export default function Welcome({ onLogin }: Props) {
 
       {/* Footer */}
       <div className="max-w-4xl mx-auto w-full text-center text-xs text-red-200/80 pt-6 border-t border-white/10">
-        B-Link Community Transfusion Network · Free, Privacy-Preserving Blood Donor Matching
+        B-Link Community Transfusion Network · Free, Privacy-Preserving Blood
+        Donor Matching
       </div>
     </div>
   )

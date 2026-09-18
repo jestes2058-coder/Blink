@@ -1,4 +1,4 @@
-import React from 'react'
+import React from "react"
 import {
   Flame,
   Droplet,
@@ -10,12 +10,12 @@ import {
   X,
   Phone,
   AlertTriangle,
-} from 'lucide-react'
-import type { BloodRequest, BloodGroup } from '../types'
-import { formatRequestSchedule } from '../utils/dateSchedule'
-import BloodBadge from './BloodBadge'
-import UrgencyBadge from './UrgencyBadge'
-import UserAvatar from './UserAvatar'
+} from "lucide-react"
+import type { BloodRequest, BloodGroup } from "../types"
+import { formatRequestSchedule } from "../utils/dateSchedule"
+import BloodBadge from "./BloodBadge"
+import UrgencyBadge from "./UrgencyBadge"
+import UserAvatar from "./UserAvatar"
 
 interface Props {
   request: BloodRequest
@@ -23,20 +23,30 @@ interface Props {
   onDismiss: () => void
 }
 
-export default function IncomingRequestAlertModal({ request, onAccept, onDismiss }: Props) {
-  const isCritical = request.urgency === 'critical'
+export default function IncomingRequestAlertModal({
+  request,
+  onAccept,
+  onDismiss,
+}: Props) {
+  const isCritical = request.urgency === "critical"
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-red-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className={`relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border-2 ${
-        isCritical ? 'border-red-600 ring-4 ring-red-500/30' : 'border-amber-500 ring-4 ring-amber-500/20'
-      }`}>
-        {/* Header */}
-        <div className={`p-5 sm:p-6 text-white relative ${
+      <div
+        className={`relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border-2 ${
           isCritical
-            ? 'bg-gradient-to-r from-red-800 via-red-700 to-rose-800'
-            : 'bg-gradient-to-r from-amber-700 via-red-700 to-rose-700'
-        }`}>
+            ? "border-red-600 ring-4 ring-red-500/30"
+            : "border-amber-500 ring-4 ring-amber-500/20"
+        }`}
+      >
+        {/* Header */}
+        <div
+          className={`p-5 sm:p-6 text-white relative ${
+            isCritical
+              ? "bg-gradient-to-r from-red-800 via-red-700 to-rose-800"
+              : "bg-gradient-to-r from-amber-700 via-red-700 to-rose-700"
+          }`}
+        >
           <button
             onClick={onDismiss}
             aria-label="Dismiss alert"
@@ -47,18 +57,31 @@ export default function IncomingRequestAlertModal({ request, onAccept, onDismiss
 
           <div className="flex items-center gap-2 mb-2">
             <span className="p-1.5 rounded-xl bg-white/20 text-yellow-300">
-              {isCritical ? <Flame className="w-5 h-5 animate-pulse" /> : <Droplet className="w-5 h-5 fill-yellow-300" />}
+              {isCritical ? (
+                <Flame className="w-5 h-5 animate-pulse" />
+              ) : (
+                <Droplet className="w-5 h-5 fill-yellow-300" />
+              )}
             </span>
             <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-red-100">
-              {isCritical ? '🚨 Area Emergency Blood Alert' : '🩸 Blood Needed in Your District'}
+              {isCritical
+                ? "🚨 Area Emergency Blood Alert"
+                : "🩸 Blood Needed in Your District"}
             </span>
           </div>
 
-          <h3 className="text-xl sm:text-2xl font-black tracking-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          <h3
+            className="text-xl sm:text-2xl font-black tracking-tight"
+            style={{ fontFamily: "'DM Serif Display', serif" }}
+          >
             {request.bloodGroup} Needed for {request.patientName}
           </h3>
           <p className="text-xs text-red-100 mt-1">
-            Broadcasted by <strong>{request.requestorName}</strong> in <strong>{request.district}{request.state ? `, ${request.state}` : ''}</strong>
+            Broadcasted by <strong>{request.requestorName}</strong> in{" "}
+            <strong>
+              {request.district}
+              {request.state ? `, ${request.state}` : ""}
+            </strong>
           </p>
         </div>
 
@@ -66,10 +89,18 @@ export default function IncomingRequestAlertModal({ request, onAccept, onDismiss
         <div className="p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between gap-3 pb-2 border-b border-gray-100">
             <div className="flex items-center gap-2.5">
-              <UserAvatar src={request.requestorAvatar} name={request.patientName} size="md" />
+              <UserAvatar
+                src={request.requestorAvatar}
+                name={request.patientName}
+                size="md"
+              />
               <div>
-                <p className="text-xs font-bold text-gray-900">{request.patientName}</p>
-                <p className="text-[11px] text-gray-500">{request.unitsNeeded || 1} Unit(s) Required</p>
+                <p className="text-xs font-bold text-gray-900">
+                  {request.patientName}
+                </p>
+                <p className="text-[11px] text-gray-500">
+                  {request.unitsNeeded || 1} Unit(s) Required
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -83,16 +114,25 @@ export default function IncomingRequestAlertModal({ request, onAccept, onDismiss
             <div className="bg-gray-50 p-3 rounded-2xl flex items-center gap-2">
               <Building2 className="w-4 h-4 text-red-600 flex-shrink-0" />
               <div className="truncate">
-                <span className="text-gray-500 text-[10px] block">Hospital / Clinic</span>
-                <span className="font-bold text-gray-800 truncate block">{request.hospital}</span>
+                <span className="text-gray-500 text-[10px] block">
+                  Hospital / Clinic
+                </span>
+                <span className="font-bold text-gray-800 truncate block">
+                  {request.hospital}
+                </span>
               </div>
             </div>
 
             <div className="bg-gray-50 p-3 rounded-2xl flex items-center gap-2">
               <MapPin className="w-4 h-4 text-red-600 flex-shrink-0" />
               <div className="truncate">
-                <span className="text-gray-500 text-[10px] block">Location Area</span>
-                <span className="font-bold text-gray-800 truncate block">{request.district}{request.state ? `, ${request.state}` : ''}</span>
+                <span className="text-gray-500 text-[10px] block">
+                  Location Area
+                </span>
+                <span className="font-bold text-gray-800 truncate block">
+                  {request.district}
+                  {request.state ? `, ${request.state}` : ""}
+                </span>
               </div>
             </div>
           </div>
@@ -104,7 +144,12 @@ export default function IncomingRequestAlertModal({ request, onAccept, onDismiss
               <span>When Blood is Needed:</span>
             </div>
             <p className="text-red-900 font-extrabold text-sm pl-6">
-              {formatRequestSchedule(request.requiredBy, request.neededDate, request.neededTime, request.urgency)}
+              {formatRequestSchedule(
+                request.requiredBy,
+                request.neededDate,
+                request.neededTime,
+                request.urgency,
+              )}
             </p>
           </div>
 

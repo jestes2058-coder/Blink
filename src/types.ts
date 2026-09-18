@@ -1,21 +1,9 @@
-export type BloodGroup = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
-export type Urgency = 'critical' | 'urgent' | 'planned'
-export type MatchStatus = 'pending' | 'accepted' | 'declined'
-export type RequestStatus = 'open' | 'fulfilled' | 'closed'
+export type BloodGroup = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
+export type Urgency = "critical" | "urgent" | "planned"
+export type MatchStatus = "pending" | "accepted" | "declined"
+export type RequestStatus = "open" | "fulfilled" | "closed"
 
-export type View =
-  | 'welcome'
-  | 'home'
-  | 'register-donor'
-  | 'request-blood'
-  | 'notifications'
-  | 'my-requests'
-  | 'donors-directory'
-  | 'compatibility'
-  | 'eligibility-quiz'
-  | 'blood-banks'
-  | 'donor-card'
-  | 'profile'
+export type View = "welcome" | "home" | "register-donor" | "request-blood" | "notifications" | "my-requests" | "donors-directory" | "compatibility" | "eligibility-quiz" | "blood-banks" | "donor-card" | "profile"
 
 export interface CurrentUser {
   id: string
@@ -85,20 +73,20 @@ export interface BloodBank {
   address: string
   phone: string
   timing: string
-  availableStock: Record<BloodGroup, 'high' | 'moderate' | 'low' | 'critical'>
+  availableStock: Record<BloodGroup, "high" | "moderate" | "low" | "critical">
   isEmergency24x7: boolean
 }
 
 export interface ToastMessage {
   id: string
-  type: 'success' | 'info' | 'warning' | 'error'
+  type: "success" | "info" | "warning" | "error"
   title: string
   message: string
   timestamp: number
 }
 
 export interface DonorBadge {
-  level: 'Bronze' | 'Silver' | 'Gold' | 'Platinum'
+  level: "Bronze" | "Silver" | "Gold" | "Platinum"
   title: string
   minDonations: number
   color: string
@@ -121,7 +109,7 @@ export interface SentEmailAlert {
   htmlBody: string
   plainText: string
   sentAt: string
-  status: 'delivered' | 'opened' | 'simulated'
+  status: "delivered" | "opened" | "simulated"
 }
 
 export interface EmailOtpRecord {
@@ -139,5 +127,3 @@ export interface PhoneOtpRecord {
 }
 
 export type SmsOtpRecord = PhoneOtpRecord
-
-

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef } from "react"
 import {
   X,
   Camera,
@@ -12,18 +12,26 @@ import {
   CheckCircle2,
   Trash2,
   ShieldCheck,
-} from 'lucide-react'
-import type { BloodGroup, CurrentUser, Donor } from '../types'
-import { BLOOD_GROUPS, store } from '../store'
-import { INDIAN_STATES_AND_DISTRICTS, getDistrictsForState, DEFAULT_STATE } from '../data/indianLocations'
-import UserAvatar from './UserAvatar'
+} from "lucide-react"
+import type { BloodGroup, CurrentUser, Donor } from "../types"
+import { BLOOD_GROUPS, store } from "../store"
+import {
+  INDIAN_STATES_AND_DISTRICTS,
+  getDistrictsForState,
+  DEFAULT_STATE,
+} from "../data/indianLocations"
+import UserAvatar from "./UserAvatar"
 
 interface Props {
   user: CurrentUser
   donorProfile?: Donor | null
   onClose: () => void
   onSaved: (updatedUser: CurrentUser) => void
-  onToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
+  onToast: (
+    type: "success" | "info" | "warning" | "error",
+    title: string,
+    message: string,
+  ) => void
 }
 
 export default function EditProfileModal({
@@ -33,19 +41,25 @@ export default function EditProfileModal({
   onSaved,
   onToast,
 }: Props) {
-  const [name, setName] = useState(user.name || '')
-  const [phone, setPhone] = useState(user.phone || '')
-  const [email, setEmail] = useState(user.email || '')
-  const [avatar, setAvatar] = useState<string | undefined>(user.avatar || donorProfile?.avatar)
-  const [state, setState] = useState(user.state || donorProfile?.state || DEFAULT_STATE)
-  const [district, setDistrict] = useState(user.district || donorProfile?.district || 'Ernakulam')
+  const [name, setName] = useState(user.name || "")
+  const [phone, setPhone] = useState(user.phone || "")
+  const [email, setEmail] = useState(user.email || "")
+  const [avatar, setAvatar] = useState<string | undefined>(
+    user.avatar || donorProfile?.avatar,
+  )
+  const [state, setState] = useState(
+    user.state || donorProfile?.state || DEFAULT_STATE,
+  )
+  const [district, setDistrict] = useState(
+    user.district || donorProfile?.district || "Ernakulam",
+  )
   const [bloodGroup, setBloodGroup] = useState<BloodGroup>(
-    user.bloodGroup || donorProfile?.bloodGroup || 'O+'
+    user.bloodGroup || donorProfile?.bloodGroup || "O+",
   )
   const [isDonor, setIsDonor] = useState(Boolean(donorProfile || user.isDonor))
   const [available, setAvailable] = useState(donorProfile?.available ?? true)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState("")
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -55,7 +69,7 @@ export default function EditProfileModal({
     setState(newState)
     const dists = getDistrictsForState(newState)
     if (!dists.includes(district)) {
-      setDistrict(dists[0] || '')
+      setDistrict(dists[0] || "")
     }
   }
 
@@ -64,7 +78,7 @@ export default function EditProfileModal({
     if (!file) return
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('Photo size exceeds 5MB. Please choose a smaller image.')
+      setError("Photo size exceeds 5MB. Please choose a smaller image.")
       return
     }
 
@@ -73,7 +87,7 @@ export default function EditProfileModal({
       const img = new Image()
       img.onload = () => {
         // Compress image using canvas
-        const canvas = document.createElement('canvas')
+        const canvas = document.createElement("canvas")
         const MAX_DIM = 400
         let width = img.width
         let height = img.height
@@ -92,25 +106,26 @@ export default function EditProfileModal({
 
         canvas.width = width
         canvas.height = height
-        const ctx = canvas.getContext('2d')
+        const ctx = canvas.getContext("2d")
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height)
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85)
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85)
           setAvatar(compressedDataUrl)
-          setError('')
+          setError("")
         }
       }
-      img.src = event.target?.result as string
+      img.src = (event.target?.result as string)
     }
     reader.readAsDataURL(file)
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return setError('Please enter your full name.')
-    if (!phone.trim()) return setError('Please enter your verified phone number.')
+    if (!name.trim()) return setError("Please enter your full name.")
+    if (!phone.trim())
+      return setError("Please enter your verified phone number.")
 
-    setError('')
+    setError("")
     setIsSaving(true)
 
     try {
@@ -129,10 +144,14 @@ export default function EditProfileModal({
 
       await store.saveUserProfile(updatedUser, isDonor, available)
       onSaved(updatedUser)
-      onToast('success', 'Profile Updated', 'Your profile details and photo have been saved successfully.')
+      onToast(
+        "success",
+        "Profile Updated",
+        "Your profile details and photo have been saved successfully.",
+      )
       onClose()
     } catch (err) {
-      setError('Failed to save profile changes. Please try again.')
+      setError("Failed to save profile changes. Please try again.")
     } finally {
       setIsSaving(false)
     }
@@ -148,8 +167,12 @@ export default function EditProfileModal({
               <User className="w-5 h-5 text-red-200" />
             </div>
             <div>
-              <h3 className="text-lg sm:text-xl font-bold tracking-tight">Edit Profile & Photo</h3>
-              <p className="text-[11px] text-red-100">Update your name, photo, location & donor settings</p>
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+                Edit Profile & Photo
+              </h3>
+              <p className="text-[11px] text-red-100">
+                Update your name, photo, location & donor settings
+              </p>
             </div>
           </div>
           <button
@@ -162,7 +185,10 @@ export default function EditProfileModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSave} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+        <form
+          onSubmit={handleSave}
+          className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1"
+        >
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-2xl">
               {error}
@@ -172,7 +198,13 @@ export default function EditProfileModal({
           {/* Profile Photo Section */}
           <div className="p-4 rounded-2xl bg-gradient-to-br from-red-50 to-rose-50 border border-red-100 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
             <div className="relative group">
-              <UserAvatar src={avatar} name={name || 'User'} size="xl" bloodGroup={bloodGroup} showBadge />
+              <UserAvatar
+                src={avatar}
+                name={name || "User"}
+                size="xl"
+                bloodGroup={bloodGroup}
+                showBadge
+              />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -186,7 +218,8 @@ export default function EditProfileModal({
             <div className="flex-1 space-y-2">
               <p className="text-xs font-bold text-gray-800">Profile Photo</p>
               <p className="text-[11px] text-gray-500">
-                Visible to blood recipients and emergency donors during matching.
+                Visible to blood recipients and emergency donors during
+                matching.
               </p>
               <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
                 <button
@@ -223,7 +256,10 @@ export default function EditProfileModal({
           {/* Name & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="editProfileName" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+              <label
+                htmlFor="editProfileName"
+                className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+              >
                 Full Name *
               </label>
               <div className="relative">
@@ -243,7 +279,10 @@ export default function EditProfileModal({
             </div>
 
             <div>
-              <label htmlFor="editProfilePhone" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+              <label
+                htmlFor="editProfilePhone"
+                className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+              >
                 Phone Number *
               </label>
               <div className="relative">
@@ -265,7 +304,10 @@ export default function EditProfileModal({
 
           {/* Email */}
           <div>
-            <label htmlFor="editProfileEmail" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+            <label
+              htmlFor="editProfileEmail"
+              className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+            >
               Email Address
             </label>
             <div className="relative">
@@ -286,7 +328,10 @@ export default function EditProfileModal({
           {/* Indian State & District Cascading Select */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="editProfileState" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+              <label
+                htmlFor="editProfileState"
+                className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+              >
                 State (India) *
               </label>
               <select
@@ -305,7 +350,10 @@ export default function EditProfileModal({
             </div>
 
             <div>
-              <label htmlFor="editProfileDistrict" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+              <label
+                htmlFor="editProfileDistrict"
+                className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+              >
                 District ({state}) *
               </label>
               <select
@@ -337,8 +385,8 @@ export default function EditProfileModal({
                   onClick={() => setBloodGroup(g)}
                   className={`py-2 rounded-xl text-xs font-black border-2 transition ${
                     bloodGroup === g
-                      ? 'bg-red-700 border-red-700 text-white shadow-md'
-                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-red-300'
+                      ? "bg-red-700 border-red-700 text-white shadow-md"
+                      : "bg-gray-50 border-gray-200 text-gray-700 hover:border-red-300"
                   }`}
                 >
                   {g}
@@ -350,11 +398,18 @@ export default function EditProfileModal({
           {/* Volunteer Donor Options */}
           <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 space-y-3">
             <div className="flex items-center justify-between">
-              <label htmlFor="editIsDonor" className="flex items-center gap-2 cursor-pointer">
+              <label
+                htmlFor="editIsDonor"
+                className="flex items-center gap-2 cursor-pointer"
+              >
                 <Heart className="w-4 h-4 text-red-600" />
                 <div>
-                  <p className="text-xs font-bold text-gray-800">Volunteer Blood Donor</p>
-                  <p className="text-[11px] text-gray-500">Listed in district directory for emergency requests</p>
+                  <p className="text-xs font-bold text-gray-800">
+                    Volunteer Blood Donor
+                  </p>
+                  <p className="text-[11px] text-gray-500">
+                    Listed in district directory for emergency requests
+                  </p>
                 </div>
               </label>
               <input
@@ -369,11 +424,18 @@ export default function EditProfileModal({
 
             {isDonor && (
               <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
-                <label htmlFor="editIsAvailable" className="flex items-center gap-2 cursor-pointer">
+                <label
+                  htmlFor="editIsAvailable"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   <div>
-                    <p className="text-xs font-bold text-gray-800">Currently Available to Donate</p>
-                    <p className="text-[11px] text-gray-500">Uncheck if temporarily traveling or unwell</p>
+                    <p className="text-xs font-bold text-gray-800">
+                      Currently Available to Donate
+                    </p>
+                    <p className="text-[11px] text-gray-500">
+                      Uncheck if temporarily traveling or unwell
+                    </p>
                   </div>
                 </label>
                 <input
@@ -397,7 +459,9 @@ export default function EditProfileModal({
                 className="flex-1 py-3 bg-red-700 hover:bg-red-800 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>{isSaving ? 'Saving Changes...' : 'Save Profile Details'}</span>
+                <span>
+                  {isSaving ? "Saving Changes..." : "Save Profile Details"}
+                </span>
               </button>
               <button
                 type="button"
@@ -411,15 +475,24 @@ export default function EditProfileModal({
             <button
               type="button"
               onClick={async () => {
-                if (window.confirm('Are you sure you want to completely clear all database records, donors, and requests?')) {
+                if (
+                  window.confirm(
+                    "Are you sure you want to completely clear all database records, donors, and requests?",
+                  )
+                ) {
                   await store.clearAllData()
-                  onToast('info', 'Database Cleared', 'All local and Supabase records have been wiped clean.')
+                  onToast(
+                    "info",
+                    "Database Cleared",
+                    "All local and Supabase records have been wiped clean.",
+                  )
                   window.location.reload()
                 }
               }}
               className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
             >
-              <Trash2 className="w-3.5 h-3.5 text-red-600" /> Clear All Database & Records
+              <Trash2 className="w-3.5 h-3.5 text-red-600" /> Clear All Database
+              & Records
             </button>
           </div>
         </form>

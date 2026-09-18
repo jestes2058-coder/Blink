@@ -1,62 +1,145 @@
-import type { BloodBank, BloodGroup, BloodRequest, CurrentUser, Donor, DonorBadge, Match, SentEmailAlert, EmailOtpRecord, PhoneOtpRecord, SmsOtpRecord } from './types'
-import { supabase, isSupabaseConfigured, broadcastEmergencyRequest } from './supabase'
+import type {
+  BloodBank,
+  BloodGroup,
+  BloodRequest,
+  CurrentUser,
+  Donor,
+  DonorBadge,
+  Match,
+  SentEmailAlert,
+  EmailOtpRecord,
+  PhoneOtpRecord,
+} from "./types"
 import {
-  INDIAN_STATES_AND_DISTRICTS,
-  getDistrictsForState,
+  supabase,
+  isSupabaseConfigured,
+  broadcastEmergencyRequest,
+} from "./supabase"
+import {
   DEFAULT_STATE,
   DEFAULT_DISTRICT,
   KERALA_DISTRICTS,
-} from './data/indianLocations'
-import { computeScheduleDetails, formatRequestSchedule } from './utils/dateSchedule'
+} from "./data/indianLocations"
+import {
+  formatRequestSchedule,
+} from "./utils/dateSchedule"
 
 // Strict Email Validator
 export function isValidEmail(email: string): boolean {
-  if (!email || typeof email !== 'string') return false
+  if (!email || typeof email !== "string") return false
   const trimmed = email.trim()
   if (trimmed.length < 5 || trimmed.length > 254) return false
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/
+  const emailRegex =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/
   return emailRegex.test(trimmed)
 }
 
-export const BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+export const BLOOD_GROUPS: BloodGroup[] = [
+  "A+",
+  "A-",
+  "B+",
+  "B-",
+  "AB+",
+  "AB-",
+  "O+",
+  "O-",
+]
 
 export const DISTRICTS = KERALA_DISTRICTS
 
 export const DEMO_USERS: (CurrentUser & { roleDesc?: string })[] = [
-  { id: 'demo-1', name: 'Dr. Arjun Nair', phone: '+91 98470 12345', email: 'arjun@bloodlink.org', bloodGroup: 'O+', district: 'Ernakulam', state: 'Kerala', isDonor: true, roleDesc: 'O+ Voluntary Donor · Ernakulam' },
-  { id: 'demo-2', name: 'Priya Varma', phone: '+91 94460 54321', email: 'priya@bloodlink.org', bloodGroup: 'A+', district: 'Thiruvananthapuram', state: 'Kerala', isDonor: true, roleDesc: 'A+ Life Saver · Trivandrum' },
-  { id: 'demo-3', name: 'Mohammed Basil', phone: '+91 97450 99887', email: 'basil@bloodlink.org', bloodGroup: 'B+', district: 'Kozhikode', state: 'Kerala', isDonor: true, roleDesc: 'B+ Hospital Requester · Calicut' },
+  {
+    id: "demo-1",
+    name: "Dr. Arjun Nair",
+    phone: "+91 98470 12345",
+    email: "arjun@bloodlink.org",
+    bloodGroup: "O+",
+    district: "Ernakulam",
+    state: "Kerala",
+    isDonor: true,
+    roleDesc: "O+ Voluntary Donor · Ernakulam",
+  },
+  {
+    id: "demo-2",
+    name: "Priya Varma",
+    phone: "+91 94460 54321",
+    email: "priya@bloodlink.org",
+    bloodGroup: "A+",
+    district: "Thiruvananthapuram",
+    state: "Kerala",
+    isDonor: true,
+    roleDesc: "A+ Life Saver · Trivandrum",
+  },
+  {
+    id: "demo-3",
+    name: "Mohammed Basil",
+    phone: "+91 97450 99887",
+    email: "basil@bloodlink.org",
+    bloodGroup: "B+",
+    district: "Kozhikode",
+    state: "Kerala",
+    isDonor: true,
+    roleDesc: "B+ Hospital Requester · Calicut",
+  },
 ]
 
 // Who can donate to a given recipient blood group
 export const COMPATIBLE_DONORS: Record<BloodGroup, BloodGroup[]> = {
-  'A+':  ['A+', 'A-', 'O+', 'O-'],
-  'A-':  ['A-', 'O-'],
-  'B+':  ['B+', 'B-', 'O+', 'O-'],
-  'B-':  ['B-', 'O-'],
-  'AB+': ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-  'AB-': ['A-', 'B-', 'AB-', 'O-'],
-  'O+':  ['O+', 'O-'],
-  'O-':  ['O-'],
+  "A+": ["A+", "A-", "O+", "O-"],
+  "A-": ["A-", "O-"],
+  "B+": ["B+", "B-", "O+", "O-"],
+  "B-": ["B-", "O-"],
+  "AB+": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+  "AB-": ["A-", "B-", "AB-", "O-"],
+  "O+": ["O+", "O-"],
+  "O-": ["O-"],
 }
 
 // Who a given donor blood group can donate to
 export const COMPATIBLE_RECIPIENTS: Record<BloodGroup, BloodGroup[]> = {
-  'A+':  ['A+', 'AB+'],
-  'A-':  ['A+', 'A-', 'AB+', 'AB-'],
-  'B+':  ['B+', 'AB+'],
-  'B-':  ['B+', 'B-', 'AB+', 'AB-'],
-  'AB+': ['AB+'],
-  'AB-': ['AB+', 'AB-'],
-  'O+':  ['A+', 'B+', 'AB+', 'O+'],
-  'O-':  ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+  "A+": ["A+", "AB+"],
+  "A-": ["A+", "A-", "AB+", "AB-"],
+  "B+": ["B+", "AB+"],
+  "B-": ["B+", "B-", "AB+", "AB-"],
+  "AB+": ["AB+"],
+  "AB-": ["AB+", "AB-"],
+  "O+": ["A+", "B+", "AB+", "O+"],
+  "O-": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
 }
 
 export const DONOR_BADGES: DonorBadge[] = [
-  { level: 'Bronze', title: 'Life Saver Initiate', minDonations: 1, color: '#B45309', bgLight: '#FEF3C7', description: 'Saved 3 lives through blood donation' },
-  { level: 'Silver', title: 'Community Guardian', minDonations: 3, color: '#4B5563', bgLight: '#F3F4F6', description: 'Saved 9+ lives with consistent donations' },
-  { level: 'Gold', title: 'District Hero', minDonations: 5, color: '#D97706', bgLight: '#FFFBEB', description: 'Saved 15+ lives - a true community champion' },
-  { level: 'Platinum', title: 'Legendary Lifesaver', minDonations: 8, color: '#9333EA', bgLight: '#FAF5FF', description: 'Saved 24+ lives - exemplary civic champion' },
+  {
+    level: "Bronze",
+    title: "Life Saver Initiate",
+    minDonations: 1,
+    color: "#B45309",
+    bgLight: "#FEF3C7",
+    description: "Saved 3 lives through blood donation",
+  },
+  {
+    level: "Silver",
+    title: "Community Guardian",
+    minDonations: 3,
+    color: "#4B5563",
+    bgLight: "#F3F4F6",
+    description: "Saved 9+ lives with consistent donations",
+  },
+  {
+    level: "Gold",
+    title: "District Hero",
+    minDonations: 5,
+    color: "#D97706",
+    bgLight: "#FFFBEB",
+    description: "Saved 15+ lives - a true community champion",
+  },
+  {
+    level: "Platinum",
+    title: "Legendary Lifesaver",
+    minDonations: 8,
+    color: "#9333EA",
+    bgLight: "#FAF5FF",
+    description: "Saved 24+ lives - exemplary civic champion",
+  },
 ]
 
 export function getDonorBadge(donations: number): DonorBadge | null {
@@ -73,7 +156,10 @@ export const DONATION_INTERVAL_DAYS = 90
 
 export function daysSinceLastDonation(donor: Donor): number | null {
   if (!donor.lastDonation) return null
-  return Math.floor((Date.now() - new Date(donor.lastDonation).getTime()) / (1000 * 60 * 60 * 24))
+  return Math.floor(
+    (Date.now() - new Date(donor.lastDonation).getTime()) /
+      (1000 * 60 * 60 * 24),
+  )
 }
 
 export function canDonate(donor: Donor): boolean {
@@ -84,32 +170,50 @@ export function canDonate(donor: Donor): boolean {
 
 export function nextEligibleDate(donor: Donor): Date | null {
   if (!donor.lastDonation) return null
-  return new Date(new Date(donor.lastDonation).getTime() + DONATION_INTERVAL_DAYS * 86400000)
+  return new Date(
+    new Date(donor.lastDonation).getTime() + DONATION_INTERVAL_DAYS * 86400000,
+  )
 }
 
-export function findEligibleDonors(request: Partial<BloodRequest>, donors: Donor[]): Donor[] {
+export function findEligibleDonors(
+  request: Partial<BloodRequest>,
+  donors: Donor[],
+): Donor[] {
   if (!request.bloodGroup) return []
   const compatible = COMPATIBLE_DONORS[request.bloodGroup] || []
-  const targetDistrict = (request.district || '').trim().toLowerCase()
-  const targetState = (request.state || '').trim().toLowerCase()
-  const isCritical = request.urgency === 'critical'
+  const targetDistrict = (request.district || "").trim().toLowerCase()
+  const targetState = (request.state || "").trim().toLowerCase()
+  const isCritical = request.urgency === "critical"
 
-  return donors.filter(d => {
+  return donors.filter((d) => {
     if (!d.bloodGroup || !compatible.includes(d.bloodGroup)) return false
-    if (d.id === request.requestorId || (request.requestorPhone && d.phone === request.requestorPhone)) return false
+    if (
+      d.id === request.requestorId ||
+      (request.requestorPhone && d.phone === request.requestorPhone)
+    )
+      return false
     if (d.available === false) return false
     if (!canDonate(d)) return false
 
-    const donorDistrict = (d.district || '').trim().toLowerCase()
-    const donorState = (d.state || '').trim().toLowerCase()
+    const donorDistrict = (d.district || "").trim().toLowerCase()
+    const donorState = (d.state || "").trim().toLowerCase()
 
     // 1. Same District Match (Primary)
-    if (targetDistrict && donorDistrict && (donorDistrict === targetDistrict || donorDistrict.includes(targetDistrict) || targetDistrict.includes(donorDistrict))) {
+    if (
+      targetDistrict &&
+      donorDistrict &&
+      (donorDistrict === targetDistrict ||
+        donorDistrict.includes(targetDistrict) ||
+        targetDistrict.includes(donorDistrict))
+    ) {
       return true
     }
 
     // 2. Critical SOS Emergency: Alert all matching donors in the same State or if district is unspecified
-    if (isCritical && (targetState === donorState || !targetDistrict || !donorDistrict)) {
+    if (
+      isCritical &&
+      (targetState === donorState || !targetDistrict || !donorDistrict)
+    ) {
       return true
     }
 
@@ -123,37 +227,52 @@ export function findEligibleDonors(request: Partial<BloodRequest>, donors: Donor
 }
 
 export function createMatches(donors: Donor[], now: string): Match[] {
-  return donors.map(d => ({
+  return donors.map((d) => ({
     donorId: d.id,
     donorName: d.name,
     donorBloodGroup: d.bloodGroup,
     donorDistrict: d.district,
     donorAvatar: d.avatar,
-    status: 'pending' as const,
+    status: "pending" as const,
     notifiedAt: now,
   }))
 }
 
 // Generate contextual, situational email alert for matched donor
-export function generateDonorAlertEmail(request: BloodRequest, donor: Donor): { subject: string; htmlBody: string; plainText: string } {
-  const isEmergency = request.urgency === 'critical'
-  const isUrgent = request.urgency === 'urgent'
+export function generateDonorAlertEmail(
+  request: BloodRequest,
+  donor: Donor,
+): { subject: string; htmlBody: string; plainText: string } {
+  const isEmergency = request.urgency === "critical"
+  const isUrgent = request.urgency === "urgent"
 
   const urgencyLabel = isEmergency
-    ? 'CRITICAL EMERGENCY (Need within 1–4 Hours)'
+    ? "CRITICAL EMERGENCY (Need within 1–4 Hours)"
     : isUrgent
-    ? 'URGENT (Need within 24 Hours)'
-    : 'PLANNED (Scheduled Procedure)'
+      ? "URGENT (Need within 24 Hours)"
+      : "PLANNED (Scheduled Procedure)"
 
-  const urgencyBadgeColor = isEmergency ? '#dc2626' : isUrgent ? '#d97706' : '#2563eb'
-  const urgencyBgColor = isEmergency ? '#fef2f2' : isUrgent ? '#fffbeb' : '#eff6ff'
-  const urgencyBorderColor = isEmergency ? '#fca5a5' : isUrgent ? '#fde68a' : '#bfdbfe'
+  const urgencyBadgeColor = isEmergency
+    ? "#dc2626"
+    : isUrgent
+      ? "#d97706"
+      : "#2563eb"
+  const urgencyBgColor = isEmergency
+    ? "#fef2f2"
+    : isUrgent
+      ? "#fffbeb"
+      : "#eff6ff"
+  const urgencyBorderColor = isEmergency
+    ? "#fca5a5"
+    : isUrgent
+      ? "#fde68a"
+      : "#bfdbfe"
 
   const subject = isEmergency
     ? `🚨 EMERGENCY ALERT: ${request.bloodGroup} Blood Needed for ${request.patientName} at ${request.hospital}, ${request.district}`
     : isUrgent
-    ? `⚠️ URGENT REQUEST: ${request.bloodGroup} Blood Needed at ${request.hospital}, ${request.district}`
-    : `📋 BLOOD REQUEST: ${request.bloodGroup} Scheduled Need at ${request.hospital}, ${request.district}`
+      ? `⚠️ URGENT REQUEST: ${request.bloodGroup} Blood Needed at ${request.hospital}, ${request.district}`
+      : `📋 BLOOD REQUEST: ${request.bloodGroup} Scheduled Need at ${request.hospital}, ${request.district}`
 
   const plainText = `
 B-LINK TRANSFUSION ALERT - ${urgencyLabel}
@@ -161,7 +280,7 @@ B-LINK TRANSFUSION ALERT - ${urgencyLabel}
 
 Hello ${donor.name},
 
-An emergency blood request matching your blood group (${donor.bloodGroup} for patient ${request.bloodGroup}) has been broadcasted in your district (${request.district}, ${request.state || 'Kerala'}).
+An emergency blood request matching your blood group (${donor.bloodGroup} for patient ${request.bloodGroup}) has been broadcasted in your district (${request.district}, ${request.state || "Kerala"}).
 
 PATIENT & EMERGENCY DETAILS:
 ------------------------------------------------------------------------
@@ -170,10 +289,10 @@ PATIENT & EMERGENCY DETAILS:
 - When Needed (Schedule): ${formatRequestSchedule(request.requiredBy, request.neededDate, request.neededTime, request.urgency)}
 - Units Needed: ${request.unitsNeeded || 1} Unit(s)
 - Hospital/Facility: ${request.hospital}
-- District & State: ${request.district}, ${request.state || 'India'}
+- District & State: ${request.district}, ${request.state || "India"}
 - Urgency Level: ${urgencyLabel}
 - Requestor Contact Name: ${request.requestorName}
-- Medical / Emergency Notes: ${request.notes || 'Emergency transfusion required for inpatient care.'}
+- Medical / Emergency Notes: ${request.notes || "Emergency transfusion required for inpatient care."}
 
 HOW TO RESPOND:
 1. Open B-Link App (or check Notifications tab).
@@ -244,7 +363,7 @@ B-Link Transfusion Matching Network
                       </tr>
                       <tr>
                         <td style="color: #64748b; font-weight: 600;">District & State:</td>
-                        <td style="color: #0f172a; font-weight: 700; text-align: right;">${request.district}, ${request.state || 'India'}</td>
+                        <td style="color: #0f172a; font-weight: 700; text-align: right;">${request.district}, ${request.state || "India"}</td>
                       </tr>
                       <tr>
                         <td style="color: #64748b; font-weight: 600;">When Needed (Schedule):</td>
@@ -258,12 +377,16 @@ B-Link Transfusion Matching Network
                         <td style="color: #64748b; font-weight: 600;">Requestor Name:</td>
                         <td style="color: #0f172a; font-weight: 700; text-align: right;">${request.requestorName}</td>
                       </tr>
-                      ${request.notes ? `
+                      ${
+                        request.notes
+                          ? `
                       <tr>
                         <td colspan="2" style="padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 12.5px; color: #475569;">
                           <strong>Medical Notes:</strong> ${request.notes}
                         </td>
-                      </tr>` : ''}
+                      </tr>`
+                          : ""
+                      }
                     </table>
                   </td>
                 </tr>
@@ -307,88 +430,144 @@ function uid(): string {
 // Major Kerala & Indian Blood Banks Seed
 export const SEED_BLOOD_BANKS: BloodBank[] = [
   {
-    id: 'bb-1',
-    name: 'IMA Blood Bank Complex & Research Centre',
-    state: 'Kerala',
-    district: 'Ernakulam',
-    address: 'Near JLN Stadium, Palarivattom, Kochi',
-    phone: '+91 484 234 6611',
-    timing: 'Open 24/7 (Emergency Blood Bank)',
+    id: "bb-1",
+    name: "IMA Blood Bank Complex & Research Centre",
+    state: "Kerala",
+    district: "Ernakulam",
+    address: "Near JLN Stadium, Palarivattom, Kochi",
+    phone: "+91 484 234 6611",
+    timing: "Open 24/7 (Emergency Blood Bank)",
     isEmergency24x7: true,
-    availableStock: { 'O+': 'high', 'O-': 'critical', 'A+': 'high', 'A-': 'moderate', 'B+': 'high', 'B-': 'low', 'AB+': 'high', 'AB-': 'low' },
+    availableStock: {
+      "O+": "high",
+      "O-": "critical",
+      "A+": "high",
+      "A-": "moderate",
+      "B+": "high",
+      "B-": "low",
+      "AB+": "high",
+      "AB-": "low",
+    },
   },
   {
-    id: 'bb-2',
-    name: 'Government Medical College Blood Bank',
-    state: 'Kerala',
-    district: 'Thiruvananthapuram',
-    address: 'Medical College PO, Thiruvananthapuram',
-    phone: '+91 471 252 8300',
-    timing: 'Open 24/7 (Emergency Service)',
+    id: "bb-2",
+    name: "Government Medical College Blood Bank",
+    state: "Kerala",
+    district: "Thiruvananthapuram",
+    address: "Medical College PO, Thiruvananthapuram",
+    phone: "+91 471 252 8300",
+    timing: "Open 24/7 (Emergency Service)",
     isEmergency24x7: true,
-    availableStock: { 'O+': 'high', 'O-': 'low', 'A+': 'moderate', 'A-': 'critical', 'B+': 'moderate', 'B-': 'moderate', 'AB+': 'high', 'AB-': 'moderate' },
+    availableStock: {
+      "O+": "high",
+      "O-": "low",
+      "A+": "moderate",
+      "A-": "critical",
+      "B+": "moderate",
+      "B-": "moderate",
+      "AB+": "high",
+      "AB-": "moderate",
+    },
   },
   {
-    id: 'bb-3',
-    name: 'Government General Hospital Blood Bank',
-    state: 'Kerala',
-    district: 'Kozhikode',
-    address: 'Beach Road, Mananchira, Kozhikode',
-    phone: '+91 495 236 5367',
-    timing: 'Open 24/7 (Regional Transfusion Centre)',
+    id: "bb-3",
+    name: "Government General Hospital Blood Bank",
+    state: "Kerala",
+    district: "Kozhikode",
+    address: "Beach Road, Mananchira, Kozhikode",
+    phone: "+91 495 236 5367",
+    timing: "Open 24/7 (Regional Transfusion Centre)",
     isEmergency24x7: true,
-    availableStock: { 'O+': 'moderate', 'O-': 'moderate', 'A+': 'high', 'A-': 'high', 'B+': 'critical', 'B-': 'low', 'AB+': 'moderate', 'AB-': 'critical' },
+    availableStock: {
+      "O+": "moderate",
+      "O-": "moderate",
+      "A+": "high",
+      "A-": "high",
+      "B+": "critical",
+      "B-": "low",
+      "AB+": "moderate",
+      "AB-": "critical",
+    },
   },
   {
-    id: 'bb-4',
-    name: 'Jubilee Mission Hospital Blood Centre',
-    state: 'Kerala',
-    district: 'Thrissur',
-    address: 'Jubilee Mission PO, East Fort, Thrissur',
-    phone: '+91 487 243 2200',
-    timing: 'Open 24/7',
+    id: "bb-4",
+    name: "Jubilee Mission Hospital Blood Centre",
+    state: "Kerala",
+    district: "Thrissur",
+    address: "Jubilee Mission PO, East Fort, Thrissur",
+    phone: "+91 487 243 2200",
+    timing: "Open 24/7",
     isEmergency24x7: true,
-    availableStock: { 'O+': 'high', 'O-': 'low', 'A+': 'high', 'A-': 'moderate', 'B+': 'high', 'B-': 'low', 'AB+': 'moderate', 'AB-': 'low' },
+    availableStock: {
+      "O+": "high",
+      "O-": "low",
+      "A+": "high",
+      "A-": "moderate",
+      "B+": "high",
+      "B-": "low",
+      "AB+": "moderate",
+      "AB-": "low",
+    },
   },
   {
-    id: 'bb-5',
-    name: 'Rotary Blood Bank & Transfusion Centre',
-    state: 'Tamil Nadu',
-    district: 'Chennai',
-    address: '130 Montieth Road, Egmore, Chennai',
-    phone: '+91 44 2855 4444',
-    timing: 'Open 24/7 (Emergency Service)',
+    id: "bb-5",
+    name: "Rotary Blood Bank & Transfusion Centre",
+    state: "Tamil Nadu",
+    district: "Chennai",
+    address: "130 Montieth Road, Egmore, Chennai",
+    phone: "+91 44 2855 4444",
+    timing: "Open 24/7 (Emergency Service)",
     isEmergency24x7: true,
-    availableStock: { 'O+': 'high', 'O-': 'low', 'A+': 'high', 'A-': 'moderate', 'B+': 'high', 'B-': 'low', 'AB+': 'moderate', 'AB-': 'low' },
+    availableStock: {
+      "O+": "high",
+      "O-": "low",
+      "A+": "high",
+      "A-": "moderate",
+      "B+": "high",
+      "B-": "low",
+      "AB+": "moderate",
+      "AB-": "low",
+    },
   },
   {
-    id: 'bb-6',
-    name: 'Victoria Hospital Blood Bank & Trauma Care',
-    state: 'Karnataka',
-    district: 'Bengaluru Urban',
-    address: 'Fort Road, Near City Market, Bengaluru',
-    phone: '+91 80 2670 1150',
-    timing: 'Open 24/7',
+    id: "bb-6",
+    name: "Victoria Hospital Blood Bank & Trauma Care",
+    state: "Karnataka",
+    district: "Bengaluru Urban",
+    address: "Fort Road, Near City Market, Bengaluru",
+    phone: "+91 80 2670 1150",
+    timing: "Open 24/7",
     isEmergency24x7: true,
-    availableStock: { 'O+': 'moderate', 'O-': 'critical', 'A+': 'high', 'A-': 'moderate', 'B+': 'high', 'B-': 'moderate', 'AB+': 'high', 'AB-': 'low' },
+    availableStock: {
+      "O+": "moderate",
+      "O-": "critical",
+      "A+": "high",
+      "A-": "moderate",
+      "B+": "high",
+      "B-": "moderate",
+      "AB+": "high",
+      "AB-": "low",
+    },
   },
 ]
 
 // Play sound helper for emergency notifications & messages
 export function playNotificationSound() {
   try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const audioCtx = new (
+      window.AudioContext || (window as any).webkitAudioContext
+    )()
     const now = audioCtx.currentTime
 
     const osc1 = audioCtx.createOscillator()
     const osc2 = audioCtx.createOscillator()
     const gain = audioCtx.createGain()
 
-    osc1.type = 'sine'
+    osc1.type = "sine"
     osc1.frequency.setValueAtTime(587.33, now) // D5
     osc1.frequency.setValueAtTime(880, now + 0.12) // A5
 
-    osc2.type = 'triangle'
+    osc2.type = "triangle"
     osc2.frequency.setValueAtTime(1046.5, now + 0.22) // C6
     osc2.frequency.setValueAtTime(1318.5, now + 0.35) // E6
 
@@ -411,7 +590,9 @@ export function playNotificationSound() {
 // Play loud urgent emergency alarm siren
 export function playEmergencyAlarm() {
   try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const audioCtx = new (
+      window.AudioContext || (window as any).webkitAudioContext
+    )()
     const now = audioCtx.currentTime
 
     // 3 alternating siren pulses
@@ -420,7 +601,7 @@ export function playEmergencyAlarm() {
       const osc = audioCtx.createOscillator()
       const gain = audioCtx.createGain()
 
-      osc.type = 'sawtooth'
+      osc.type = "sawtooth"
       osc.frequency.setValueAtTime(750, start)
       osc.frequency.linearRampToValueAtTime(1200, start + 0.14)
       osc.frequency.linearRampToValueAtTime(750, start + 0.28)
@@ -447,35 +628,50 @@ export const store = {
 
     try {
       // Sync Real Donors from Supabase and merge
-      const { data: donorsData, error: donorsErr } = await supabase.from('donors').select('*')
+      const { data: donorsData, error: donorsErr } = await supabase
+        .from("donors")
+        .select("*")
       if (!donorsErr && donorsData) {
         const localDonors = this.getDonors()
         const donorMap = new Map<string, Donor>()
 
         // Populate with local donors first
-        localDonors.forEach(d => {
-          const cleanPhone = (d.phone || '').replace(/\D/g, '')
-          const key = d.id || (cleanPhone.length >= 7 ? cleanPhone.slice(-10) : '') || d.email || d.name
+        localDonors.forEach((d) => {
+          const cleanPhone = (d.phone || "").replace(/\D/g, "")
+          const key =
+            d.id ||
+            (cleanPhone.length >= 7 ? cleanPhone.slice(-10) : "") ||
+            d.email ||
+            d.name
           if (key) donorMap.set(key, d)
         })
 
         // Merge Supabase donors
-        donorsData.forEach(d => {
-          const cleanPhone = (d.phone || '').replace(/\D/g, '')
-          const key = d.id || (cleanPhone.length >= 7 ? cleanPhone.slice(-10) : '') || d.email || d.name
+        donorsData.forEach((d) => {
+          const cleanPhone = (d.phone || "").replace(/\D/g, "")
+          const key =
+            d.id ||
+            (cleanPhone.length >= 7 ? cleanPhone.slice(-10) : "") ||
+            d.email ||
+            d.name
           const existing = key ? donorMap.get(key) : undefined
 
           const mapped: Donor = {
             id: d.id || existing?.id || uid(),
-            name: d.name || existing?.name || 'Donor',
-            bloodGroup: (d.blood_group || existing?.bloodGroup || 'O+') as BloodGroup,
+            name: d.name || existing?.name || "Donor",
+            bloodGroup: (d.blood_group ||
+              existing?.bloodGroup ||
+              "O+") as BloodGroup,
             state: d.state || existing?.state || DEFAULT_STATE,
             district: d.district || existing?.district || DEFAULT_DISTRICT,
-            phone: d.phone || existing?.phone || '',
-            email: d.email || existing?.email || '',
+            phone: d.phone || existing?.phone || "",
+            email: d.email || existing?.email || "",
             avatar: d.avatar || existing?.avatar,
             lastDonation: d.last_donation || existing?.lastDonation,
-            registeredAt: d.registered_at || existing?.registeredAt || new Date().toISOString(),
+            registeredAt:
+              d.registered_at ||
+              existing?.registeredAt ||
+              new Date().toISOString(),
             totalDonations: d.total_donations ?? existing?.totalDonations ?? 0,
             available: d.available ?? existing?.available ?? true,
           }
@@ -486,19 +682,26 @@ export const store = {
       }
 
       // Sync Real Requests from Supabase and merge
-      const { data: reqData, error: reqErr } = await supabase.from('blood_requests').select('*')
+      const { data: reqData, error: reqErr } = await supabase
+        .from("blood_requests")
+        .select("*")
       if (!reqErr && reqData) {
         const localRequests = this.getRequests()
         const reqMap = new Map<string, BloodRequest>()
 
         // Populate with local requests first
-        localRequests.forEach(r => reqMap.set(r.id, r))
+        localRequests.forEach((r) => reqMap.set(r.id, r))
 
         // Merge Supabase requests
-        reqData.forEach(r => {
-          const scheduleMatch = (r.notes || '').match(/\[Schedule:\s*([^\]]+)\]/)
-          const rawNotes = (r.notes || '').replace(/\[Schedule:\s*[^\]]+\]\s*/g, '').trim()
-          const computedReqBy = r.required_by || (scheduleMatch ? scheduleMatch[1] : undefined)
+        reqData.forEach((r) => {
+          const scheduleMatch = (r.notes || "").match(
+            /\[Schedule:\s*([^\]]+)\]/,
+          )
+          const rawNotes = (r.notes || "")
+            .replace(/\[Schedule:\s*[^\]]+\]\s*/g, "")
+            .trim()
+          const computedReqBy =
+            r.required_by || (scheduleMatch ? scheduleMatch[1] : undefined)
 
           const mapped: BloodRequest = {
             id: r.id,
@@ -515,7 +718,14 @@ export const store = {
             unitsNeeded: r.units_needed,
             neededDate: r.needed_date,
             neededTime: r.needed_time,
-            requiredBy: computedReqBy || formatRequestSchedule(undefined, r.needed_date, r.needed_time, r.urgency),
+            requiredBy:
+              computedReqBy ||
+              formatRequestSchedule(
+                undefined,
+                r.needed_date,
+                r.needed_time,
+                r.urgency,
+              ),
             notes: rawNotes,
             createdAt: r.created_at || new Date().toISOString(),
             status: r.status,
@@ -527,26 +737,29 @@ export const store = {
         this.setRequests(Array.from(reqMap.values()))
       }
     } catch (err) {
-      console.warn('Supabase sync notice:', err)
+      console.warn("Supabase sync notice:", err)
     }
   },
 
   getDonors(): Donor[] {
     try {
-      return JSON.parse(localStorage.getItem('bd_donors') || '[]')
+      return JSON.parse(localStorage.getItem("bd_donors") || "[]")
     } catch {
       return []
     }
   },
 
   setDonors(d: Donor[]) {
-    localStorage.setItem('bd_donors', JSON.stringify(d))
+    localStorage.setItem("bd_donors", JSON.stringify(d))
   },
 
-  async addDonor(d: Omit<Donor, 'id' | 'registeredAt' | 'totalDonations'>): Promise<Donor> {
+  async addDonor(
+    d: Omit<Donor, "id" | "registeredAt" | "totalDonations">,
+  ): Promise<Donor> {
     const donors = this.getDonors()
     const existingIndex = donors.findIndex(
-      existing => existing.phone === d.phone || (d.email && existing.email === d.email)
+      (existing) =>
+        existing.phone === d.phone || (d.email && existing.email === d.email),
     )
 
     let donor: Donor
@@ -570,7 +783,7 @@ export const store = {
     // Save to Supabase if configured
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('donors').upsert({
+        await supabase.from("donors").upsert({
           id: donor.id,
           name: donor.name,
           blood_group: donor.bloodGroup,
@@ -583,18 +796,23 @@ export const store = {
           available: donor.available ?? true,
         })
       } catch (e) {
-        console.warn('Supabase addDonor error:', e)
+        console.warn("Supabase addDonor error:", e)
       }
     }
 
     // Auto-match this newly registered donor to any existing open requests in their district!
     const requests = this.getRequests()
     let updatedRequests = false
-    requests.forEach(req => {
-      if (req.status === 'open' && req.district.toLowerCase() === donor.district.toLowerCase()) {
+    requests.forEach((req) => {
+      if (
+        req.status === "open" &&
+        req.district.toLowerCase() === donor.district.toLowerCase()
+      ) {
         const compatible = COMPATIBLE_DONORS[req.bloodGroup] || []
         if (compatible.includes(donor.bloodGroup)) {
-          const alreadyMatched = req.matches.some(m => m.donorId === donor.id || m.donorName === donor.name)
+          const alreadyMatched = req.matches.some(
+            (m) => m.donorId === donor.id || m.donorName === donor.name,
+          )
           if (!alreadyMatched) {
             req.matches.push({
               donorId: donor.id,
@@ -602,7 +820,7 @@ export const store = {
               donorBloodGroup: donor.bloodGroup,
               donorDistrict: donor.district,
               donorAvatar: donor.avatar,
-              status: 'pending',
+              status: "pending",
               notifiedAt: new Date().toISOString(),
             })
             updatedRequests = true
@@ -619,12 +837,14 @@ export const store = {
   },
 
   async updateDonor(updated: Donor) {
-    const donors = this.getDonors().map(d => (d.id === updated.id ? updated : d))
+    const donors = this.getDonors().map((d) =>
+      d.id === updated.id ? updated : d,
+    )
     this.setDonors(donors)
 
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('donors').upsert({
+        await supabase.from("donors").upsert({
           id: updated.id,
           name: updated.name,
           blood_group: updated.bloodGroup,
@@ -638,27 +858,31 @@ export const store = {
           available: updated.available,
         })
       } catch (e) {
-        console.warn('Supabase updateDonor error:', e)
+        console.warn("Supabase updateDonor error:", e)
       }
     }
   },
 
   getRequests(): BloodRequest[] {
     try {
-      return JSON.parse(localStorage.getItem('bd_requests') || '[]')
+      return JSON.parse(localStorage.getItem("bd_requests") || "[]")
     } catch {
       return []
     }
   },
 
   setRequests(r: BloodRequest[]) {
-    localStorage.setItem('bd_requests', JSON.stringify(r))
+    localStorage.setItem("bd_requests", JSON.stringify(r))
   },
 
-  async addRequest(r: Omit<BloodRequest, 'id' | 'createdAt' | 'status' | 'matches'>): Promise<BloodRequest> {
+  async addRequest(
+    r: Omit<BloodRequest, "id" | "createdAt" | "status" | "matches">,
+  ): Promise<BloodRequest> {
     const requests = this.getRequests()
     const now = new Date().toISOString()
-    const requiredBy = r.requiredBy || formatRequestSchedule(undefined, r.neededDate, r.neededTime, r.urgency)
+    const requiredBy =
+      r.requiredBy ||
+      formatRequestSchedule(undefined, r.neededDate, r.neededTime, r.urgency)
 
     const req: BloodRequest = {
       ...r,
@@ -669,7 +893,7 @@ export const store = {
       neededTime: r.neededTime,
       requiredBy,
       createdAt: now,
-      status: 'open',
+      status: "open",
       matches: [],
     }
 
@@ -688,12 +912,17 @@ export const store = {
     playEmergencyAlarm()
 
     // Cross-Tab & In-App Immediate Broadcast
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        localStorage.setItem('bd_last_sos', JSON.stringify({ req, timestamp: Date.now() }))
-        window.dispatchEvent(new CustomEvent('bloodlink_sos_broadcast', { detail: req }))
+        localStorage.setItem(
+          "bd_last_sos",
+          JSON.stringify({ req, timestamp: Date.now() }),
+        )
+        window.dispatchEvent(
+          new CustomEvent("bloodlink_sos_broadcast", { detail: req }),
+        )
       } catch (evtErr) {
-        console.warn('Broadcast event notice:', evtErr)
+        console.warn("Broadcast event notice:", evtErr)
       }
     }
 
@@ -701,10 +930,10 @@ export const store = {
       try {
         // Embed schedule tag in notes so schema without custom columns retains schedule across any client
         const notesWithSchedule = req.requiredBy
-          ? `[Schedule: ${req.requiredBy}] ${req.notes || ''}`.trim()
-          : req.notes || ''
+          ? `[Schedule: ${req.requiredBy}] ${req.notes || ""}`.trim()
+          : req.notes || ""
 
-        await supabase.from('blood_requests').insert({
+        await supabase.from("blood_requests").insert({
           id: req.id,
           requestor_id: req.requestorId,
           requestor_name: req.requestorName,
@@ -724,7 +953,7 @@ export const store = {
         // Broadcast to Supabase Realtime channel for cross-device alerts
         broadcastEmergencyRequest(req)
       } catch (e) {
-        console.warn('Supabase addRequest error:', e)
+        console.warn("Supabase addRequest error:", e)
       }
     }
 
@@ -732,40 +961,42 @@ export const store = {
   },
 
   async updateRequest(updated: BloodRequest) {
-    const requests = this.getRequests().map(r => (r.id === updated.id ? updated : r))
+    const requests = this.getRequests().map((r) =>
+      r.id === updated.id ? updated : r,
+    )
     this.setRequests(requests)
 
     if (isSupabaseConfigured) {
       try {
         await supabase
-          .from('blood_requests')
+          .from("blood_requests")
           .update({
             status: updated.status,
             matches: updated.matches,
           })
-          .eq('id', updated.id)
+          .eq("id", updated.id)
       } catch (e) {
-        console.warn('Supabase updateRequest error:', e)
+        console.warn("Supabase updateRequest error:", e)
       }
     }
   },
 
   async deleteRequest(id: string) {
-    const requests = this.getRequests().filter(r => r.id !== id)
+    const requests = this.getRequests().filter((r) => r.id !== id)
     this.setRequests(requests)
 
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('blood_requests').delete().eq('id', id)
+        await supabase.from("blood_requests").delete().eq("id", id)
       } catch (e) {
-        console.warn('Supabase deleteRequest error:', e)
+        console.warn("Supabase deleteRequest error:", e)
       }
     }
   },
 
   getCurrentUser(): CurrentUser | null {
     try {
-      const raw = localStorage.getItem('bd_current_user')
+      const raw = localStorage.getItem("bd_current_user")
       return raw ? JSON.parse(raw) : null
     } catch {
       return null
@@ -773,13 +1004,16 @@ export const store = {
   },
 
   setCurrentUser(u: CurrentUser) {
-    localStorage.setItem('bd_current_user', JSON.stringify(u))
+    localStorage.setItem("bd_current_user", JSON.stringify(u))
 
     // Ensure this user exists in donors registry so matching & SOS notification is guaranteed
     if (u.bloodGroup && u.phone) {
       const donors = this.getDonors()
       const existingIdx = donors.findIndex(
-        d => d.id === u.id || d.phone === u.phone || (u.email && d.email === u.email)
+        (d) =>
+          d.id === u.id ||
+          d.phone === u.phone ||
+          (u.email && d.email === u.email),
       )
       if (existingIdx >= 0) {
         donors[existingIdx] = {
@@ -798,7 +1032,7 @@ export const store = {
           id: u.id,
           name: u.name,
           phone: u.phone,
-          email: u.email || '',
+          email: u.email || "",
           bloodGroup: u.bloodGroup,
           state: u.state || DEFAULT_STATE,
           district: u.district || DEFAULT_DISTRICT,
@@ -814,27 +1048,36 @@ export const store = {
   },
 
   clearCurrentUser() {
-    localStorage.removeItem('bd_current_user')
+    localStorage.removeItem("bd_current_user")
   },
 
   getUsers(): CurrentUser[] {
     try {
-      return JSON.parse(localStorage.getItem('bd_users') || '[]')
+      return JSON.parse(localStorage.getItem("bd_users") || "[]")
     } catch {
       return []
     }
   },
 
-  addUser(name: string, phone: string, email?: string, avatar?: string, bloodGroup?: BloodGroup, district?: string, state?: string): CurrentUser {
+  addUser(
+    name: string,
+    phone: string,
+    email?: string,
+    avatar?: string,
+    bloodGroup?: BloodGroup,
+    district?: string,
+    state?: string,
+  ): CurrentUser {
     const users = this.getUsers()
-    const cleanPhone = (phone || '').replace(/\D/g, '')
-    const last10 = cleanPhone.length >= 7 ? cleanPhone.slice(-10) : ''
+    const cleanPhone = (phone || "").replace(/\D/g, "")
+    const last10 = cleanPhone.length >= 7 ? cleanPhone.slice(-10) : ""
 
-    const existing = users.find(u => {
-      if (email && u.email && u.email.toLowerCase() === email.toLowerCase()) return true
+    const existing = users.find((u) => {
+      if (email && u.email && u.email.toLowerCase() === email.toLowerCase())
+        return true
       if (u.phone === phone) return true
       if (last10 && u.phone) {
-        const uDigits = u.phone.replace(/\D/g, '')
+        const uDigits = u.phone.replace(/\D/g, "")
         if (uDigits.slice(-10) === last10) return true
       }
       return false
@@ -842,72 +1085,102 @@ export const store = {
 
     // Check if donor profile exists to enrich user data
     const donors = this.getDonors()
-    const existingDonor = donors.find(d => {
-      if (last10 && d.phone && d.phone.replace(/\D/g, '').slice(-10) === last10) return true
-      if (email && d.email && d.email.toLowerCase() === email.toLowerCase()) return true
+    const existingDonor = donors.find((d) => {
+      if (last10 && d.phone && d.phone.replace(/\D/g, "").slice(-10) === last10)
+        return true
+      if (email && d.email && d.email.toLowerCase() === email.toLowerCase())
+        return true
       return false
     })
 
     if (existing) {
       // Only update name if it's not a numeric phone string
-      if (name && !name.match(/^\d+$/) && name !== cleanPhone && name !== phone) {
+      if (
+        name &&
+        !name.match(/^\d+$/) &&
+        name !== cleanPhone &&
+        name !== phone
+      ) {
         existing.name = name
-      } else if ((!existing.name || existing.name.match(/^\d+$/)) && existingDonor?.name && !existingDonor.name.match(/^\d+$/)) {
+      } else if (
+        (!existing.name || existing.name.match(/^\d+$/)) &&
+        existingDonor?.name &&
+        !existingDonor.name.match(/^\d+$/)
+      ) {
         existing.name = existingDonor.name
       }
       if (phone) existing.phone = phone
       if (email) existing.email = email
       if (avatar) existing.avatar = avatar
-      else if (!existing.avatar && existingDonor?.avatar) existing.avatar = existingDonor.avatar
+      else if (!existing.avatar && existingDonor?.avatar)
+        existing.avatar = existingDonor.avatar
 
       if (bloodGroup) existing.bloodGroup = bloodGroup
-      else if (!existing.bloodGroup && existingDonor?.bloodGroup) existing.bloodGroup = existingDonor.bloodGroup
+      else if (!existing.bloodGroup && existingDonor?.bloodGroup)
+        existing.bloodGroup = existingDonor.bloodGroup
 
       if (district) existing.district = district
-      else if (!existing.district && existingDonor?.district) existing.district = existingDonor.district
+      else if (!existing.district && existingDonor?.district)
+        existing.district = existingDonor.district
 
       if (state) existing.state = state
-      else if (!existing.state && existingDonor?.state) existing.state = existingDonor.state
+      else if (!existing.state && existingDonor?.state)
+        existing.state = existingDonor.state
 
-      localStorage.setItem('bd_users', JSON.stringify(users))
+      localStorage.setItem("bd_users", JSON.stringify(users))
       this.setCurrentUser(existing)
       return existing
     }
 
-    const initialName = (name && !name.match(/^\d+$/)) ? name : (existingDonor?.name && !existingDonor.name.match(/^\d+$/) ? existingDonor.name : name)
+    const initialName =
+      name && !name.match(/^\d+$/)
+        ? name
+        : existingDonor?.name && !existingDonor.name.match(/^\d+$/)
+          ? existingDonor.name
+          : name
     const user: CurrentUser = {
       id: existingDonor?.id || uid(),
       name: initialName,
       phone,
       email,
       avatar: avatar || existingDonor?.avatar,
-      bloodGroup: bloodGroup || existingDonor?.bloodGroup || 'O+',
+      bloodGroup: bloodGroup || existingDonor?.bloodGroup || "O+",
       district: district || existingDonor?.district || DEFAULT_DISTRICT,
       state: state || existingDonor?.state || DEFAULT_STATE,
       isDonor: existingDonor ? true : true,
     }
     users.push(user)
-    localStorage.setItem('bd_users', JSON.stringify(users))
+    localStorage.setItem("bd_users", JSON.stringify(users))
     this.setCurrentUser(user)
     return user
   },
 
   // Save complete user profile and sync with Donor record and Supabase
-  async saveUserProfile(user: CurrentUser, isVolunteerDonor: boolean, isAvailable: boolean = true) {
+  async saveUserProfile(
+    user: CurrentUser,
+    isVolunteerDonor: boolean,
+    isAvailable: boolean = true,
+  ) {
     this.setCurrentUser(user)
 
-    const cleanUserPhone = (user.phone || '').replace(/\D/g, '')
-    const userLast10 = cleanUserPhone.length >= 7 ? cleanUserPhone.slice(-10) : ''
+    const cleanUserPhone = (user.phone || "").replace(/\D/g, "")
+    const userLast10 =
+      cleanUserPhone.length >= 7 ? cleanUserPhone.slice(-10) : ""
 
     const users = this.getUsers()
-    const userIndex = users.findIndex(u => {
+    const userIndex = users.findIndex((u) => {
       if (u.id === user.id) return true
       if (u.phone === user.phone) return true
       if (userLast10 && u.phone) {
-        const uDigits = u.phone.replace(/\D/g, '')
+        const uDigits = u.phone.replace(/\D/g, "")
         if (uDigits.slice(-10) === userLast10) return true
       }
-      if (user.email && u.email && u.email.toLowerCase() === user.email.toLowerCase()) return true
+      if (
+        user.email &&
+        u.email &&
+        u.email.toLowerCase() === user.email.toLowerCase()
+      )
+        return true
       return false
     })
 
@@ -916,17 +1189,22 @@ export const store = {
     } else {
       users.push(user)
     }
-    localStorage.setItem('bd_users', JSON.stringify(users))
+    localStorage.setItem("bd_users", JSON.stringify(users))
 
     const donors = this.getDonors()
-    const donorIndex = donors.findIndex(d => {
+    const donorIndex = donors.findIndex((d) => {
       if (d.id === user.id) return true
       if (d.phone === user.phone) return true
       if (userLast10 && d.phone) {
-        const dDigits = d.phone.replace(/\D/g, '')
+        const dDigits = d.phone.replace(/\D/g, "")
         if (dDigits.slice(-10) === userLast10) return true
       }
-      if (user.email && d.email && d.email.toLowerCase() === user.email.toLowerCase()) return true
+      if (
+        user.email &&
+        d.email &&
+        d.email.toLowerCase() === user.email.toLowerCase()
+      )
+        return true
       return false
     })
 
@@ -949,7 +1227,7 @@ export const store = {
         await this.addDonor({
           name: user.name,
           phone: user.phone,
-          email: user.email || '',
+          email: user.email || "",
           avatar: user.avatar,
           bloodGroup: user.bloodGroup,
           state: user.state || DEFAULT_STATE,
@@ -964,9 +1242,9 @@ export const store = {
       this.setDonors(donors)
       if (isSupabaseConfigured) {
         try {
-          await supabase.from('donors').delete().eq('phone', user.phone)
+          await supabase.from("donors").delete().eq("phone", user.phone)
         } catch (e) {
-          console.warn('Supabase delete donor warning:', e)
+          console.warn("Supabase delete donor warning:", e)
         }
       }
     }
@@ -974,7 +1252,7 @@ export const store = {
     // Also update profile in Supabase
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('profiles').upsert({
+        await supabase.from("profiles").upsert({
           id: user.id,
           name: user.name,
           phone: user.phone,
@@ -985,7 +1263,7 @@ export const store = {
           updated_at: new Date().toISOString(),
         })
       } catch (e) {
-        console.warn('Supabase profile update warning:', e)
+        console.warn("Supabase profile update warning:", e)
       }
     }
   },
@@ -997,7 +1275,7 @@ export const store = {
   // Sent Situation Email Alerts Management
   getSentEmails(): SentEmailAlert[] {
     try {
-      return JSON.parse(localStorage.getItem('bd_sent_emails') || '[]')
+      return JSON.parse(localStorage.getItem("bd_sent_emails") || "[]")
     } catch {
       return []
     }
@@ -1007,20 +1285,28 @@ export const store = {
     const emails = this.getSentEmails()
     emails.unshift(alert)
     // Keep last 100 alerts
-    localStorage.setItem('bd_sent_emails', JSON.stringify(emails.slice(0, 100)))
+    localStorage.setItem("bd_sent_emails", JSON.stringify(emails.slice(0, 100)))
   },
 
   getEmailsForDonor(donorEmail: string): SentEmailAlert[] {
     if (!donorEmail) return []
     const normalized = donorEmail.trim().toLowerCase()
-    return this.getSentEmails().filter(e => e.recipientEmail.toLowerCase() === normalized)
+    return this.getSentEmails().filter(
+      (e) => e.recipientEmail.toLowerCase() === normalized,
+    )
   },
 
-  getEmailForRequest(requestId: string, donorEmail?: string): SentEmailAlert | undefined {
-    const emails = this.getSentEmails().filter(e => e.requestId === requestId)
+  getEmailForRequest(
+    requestId: string,
+    donorEmail?: string,
+  ): SentEmailAlert | undefined {
+    const emails = this.getSentEmails().filter((e) => e.requestId === requestId)
     if (!emails.length) return undefined
     if (donorEmail) {
-      const match = emails.find(e => e.recipientEmail.toLowerCase() === donorEmail.trim().toLowerCase())
+      const match = emails.find(
+        (e) =>
+          e.recipientEmail.toLowerCase() === donorEmail.trim().toLowerCase(),
+      )
       if (match) return match
     }
     return emails[0]
@@ -1034,9 +1320,12 @@ export const store = {
 
     for (const donor of eligible) {
       if (donor.email && isValidEmail(donor.email)) {
-        const { subject, htmlBody, plainText } = generateDonorAlertEmail(request, donor)
+        const { subject, htmlBody, plainText } = generateDonorAlertEmail(
+          request,
+          donor,
+        )
         const alertRecord: SentEmailAlert = {
-          id: 'email-' + uid(),
+          id: "email-" + uid(),
           requestId: request.id,
           recipientEmail: donor.email,
           recipientName: donor.name,
@@ -1050,7 +1339,7 @@ export const store = {
           htmlBody,
           plainText,
           sentAt: new Date().toISOString(),
-          status: 'delivered',
+          status: "delivered",
         }
 
         this.addSentEmail(alertRecord)
@@ -1064,15 +1353,15 @@ export const store = {
   // SMS / Phone OTP Verification Helpers
   getPhoneOtps(): PhoneOtpRecord[] {
     try {
-      return JSON.parse(localStorage.getItem('bd_phone_otps') || '[]')
+      return JSON.parse(localStorage.getItem("bd_phone_otps") || "[]")
     } catch {
       return []
     }
   },
 
   generatePhoneOtp(phone: string): PhoneOtpRecord {
-    const cleanPhone = phone.trim().replace(/\s+/g, '')
-    const otps = this.getPhoneOtps().filter(o => o.phone !== cleanPhone)
+    const cleanPhone = phone.trim().replace(/\s+/g, "")
+    const otps = this.getPhoneOtps().filter((o) => o.phone !== cleanPhone)
     // 6 digit numeric code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes expiry
@@ -1085,44 +1374,58 @@ export const store = {
     }
 
     otps.push(record)
-    localStorage.setItem('bd_phone_otps', JSON.stringify(otps))
+    localStorage.setItem("bd_phone_otps", JSON.stringify(otps))
     return record
   },
 
-  verifyPhoneOtp(phone: string, code: string): { success: boolean; error?: string } {
-    const cleanPhone = phone.trim().replace(/\s+/g, '')
+  verifyPhoneOtp(phone: string, code: string): {
+    success: boolean
+    error?: string
+  } {
+    const cleanPhone = phone.trim().replace(/\s+/g, "")
     const inputCode = code.trim()
     const otps = this.getPhoneOtps()
-    const record = otps.find(o => o.phone === cleanPhone)
+    const record = otps.find((o) => o.phone === cleanPhone)
 
     if (!record) {
-      return { success: false, error: 'No verification code found for this phone number. Please request a new SMS code.' }
+      return {
+        success: false,
+        error:
+          "No verification code found for this phone number. Please request a new SMS code.",
+      }
     }
 
     if (Date.now() > record.expiresAt) {
-      return { success: false, error: 'SMS verification code has expired. Please click Resend SMS.' }
+      return {
+        success: false,
+        error: "SMS verification code has expired. Please click Resend SMS.",
+      }
     }
 
     if (record.code !== inputCode) {
-      return { success: false, error: 'Invalid SMS verification code. Please check the code and try again.' }
+      return {
+        success: false,
+        error:
+          "Invalid SMS verification code. Please check the code and try again.",
+      }
     }
 
     record.verified = true
-    localStorage.setItem('bd_phone_otps', JSON.stringify(otps))
+    localStorage.setItem("bd_phone_otps", JSON.stringify(otps))
     return { success: true }
   },
 
   isPhoneVerified(phone: string): boolean {
     if (!phone) return false
-    const cleanPhone = phone.trim().replace(/\s+/g, '')
-    const record = this.getPhoneOtps().find(o => o.phone === cleanPhone)
+    const cleanPhone = phone.trim().replace(/\s+/g, "")
+    const record = this.getPhoneOtps().find((o) => o.phone === cleanPhone)
     return Boolean(record?.verified)
   },
 
   // Email OTP Verification Helpers (for backwards compatibility)
   getOtps(): EmailOtpRecord[] {
     try {
-      return JSON.parse(localStorage.getItem('bd_email_otps') || '[]')
+      return JSON.parse(localStorage.getItem("bd_email_otps") || "[]")
     } catch {
       return []
     }
@@ -1130,7 +1433,7 @@ export const store = {
 
   generateEmailOtp(email: string): EmailOtpRecord {
     const trimmed = email.trim().toLowerCase()
-    const otps = this.getOtps().filter(o => o.email !== trimmed)
+    const otps = this.getOtps().filter((o) => o.email !== trimmed)
     // 6 digit numeric code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes expiry
@@ -1143,60 +1446,82 @@ export const store = {
     }
 
     otps.push(record)
-    localStorage.setItem('bd_email_otps', JSON.stringify(otps))
+    localStorage.setItem("bd_email_otps", JSON.stringify(otps))
     return record
   },
 
-  verifyEmailOtp(email: string, code: string): { success: boolean; error?: string } {
+  verifyEmailOtp(email: string, code: string): {
+    success: boolean
+    error?: string
+  } {
     const trimmed = email.trim().toLowerCase()
     const inputCode = code.trim()
     const otps = this.getOtps()
-    const record = otps.find(o => o.email === trimmed)
+    const record = otps.find((o) => o.email === trimmed)
 
     if (!record) {
-      return { success: false, error: 'No verification code found for this email. Please request a new code.' }
+      return {
+        success: false,
+        error:
+          "No verification code found for this email. Please request a new code.",
+      }
     }
 
     if (Date.now() > record.expiresAt) {
-      return { success: false, error: 'Verification code has expired. Please click Resend Code.' }
+      return {
+        success: false,
+        error: "Verification code has expired. Please click Resend Code.",
+      }
     }
 
     if (record.code !== inputCode) {
-      return { success: false, error: 'Invalid verification code. Please check and try again.' }
+      return {
+        success: false,
+        error: "Invalid verification code. Please check and try again.",
+      }
     }
 
     record.verified = true
-    localStorage.setItem('bd_email_otps', JSON.stringify(otps))
+    localStorage.setItem("bd_email_otps", JSON.stringify(otps))
     return { success: true }
   },
 
   isEmailVerified(email: string): boolean {
     if (!email) return false
     const trimmed = email.trim().toLowerCase()
-    const record = this.getOtps().find(o => o.email === trimmed)
+    const record = this.getOtps().find((o) => o.email === trimmed)
     return Boolean(record?.verified)
   },
 
   async clearAllData() {
-    localStorage.removeItem('bd_donors')
-    localStorage.removeItem('bd_requests')
-    localStorage.removeItem('bd_users')
-    localStorage.removeItem('bd_current_user')
-    localStorage.removeItem('bd_sent_emails')
-    localStorage.removeItem('bd_email_otps')
-    localStorage.removeItem('bd_phone_otps')
-    localStorage.removeItem('bd_custom_sb_url')
-    localStorage.removeItem('bd_custom_sb_key')
+    localStorage.removeItem("bd_donors")
+    localStorage.removeItem("bd_requests")
+    localStorage.removeItem("bd_users")
+    localStorage.removeItem("bd_current_user")
+    localStorage.removeItem("bd_sent_emails")
+    localStorage.removeItem("bd_email_otps")
+    localStorage.removeItem("bd_phone_otps")
+    localStorage.removeItem("bd_custom_sb_url")
+    localStorage.removeItem("bd_custom_sb_key")
 
     if (isSupabaseConfigured) {
       try {
         await Promise.allSettled([
-          supabase.from('blood_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-          supabase.from('donors').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-          supabase.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+          supabase
+            .from("blood_requests")
+            .delete()
+            .neq("id", "00000000-0000-0000-0000-000000000000"),
+          supabase
+            .from("donors")
+            .delete()
+            .neq("id", "00000000-0000-0000-0000-000000000000"),
+          supabase
+            .from("profiles")
+            .delete()
+            .neq("id", "00000000-0000-0000-0000-000000000000"),
         ])
       } catch (e) {
-        console.warn('Supabase clearAllData notice:', e)
+        console.warn("Supabase clearAllData notice:", e)
       }
     }
   },
@@ -1205,9 +1530,11 @@ export const store = {
 // Clean initialization
 export function seedIfEmpty() {
   const donors = store.getDonors()
-  if (donors.some(d => d.id.startsWith('seed') || d.id.startsWith('donor-'))) {
-    localStorage.removeItem('bd_donors')
-    localStorage.removeItem('bd_requests')
-    localStorage.removeItem('bd_users')
+  if (
+    donors.some((d) => d.id.startsWith("seed") || d.id.startsWith("donor-"))
+  ) {
+    localStorage.removeItem("bd_donors")
+    localStorage.removeItem("bd_requests")
+    localStorage.removeItem("bd_users")
   }
 }

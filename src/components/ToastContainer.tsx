@@ -1,8 +1,10 @@
-import { CheckCircle2, AlertTriangle, Info, XCircle, X } from 'lucide-react'
-import type { ToastMessage } from '../types'
+import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react"
+
+import type { ToastMessage } from "../types"
 
 interface Props {
   toasts: ToastMessage[]
+
   onDismiss: (id: string) => void
 }
 
@@ -12,17 +14,19 @@ export default function ToastContainer({ toasts, onDismiss }: Props) {
   return (
     <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
       {toasts.map((toast) => {
-        const isSuccess = toast.type === 'success'
-        const isWarning = toast.type === 'warning'
-        const isError = toast.type === 'error'
+        const isSuccess = toast.type === "success"
+
+        const isWarning = toast.type === "warning"
+
+        const isError = toast.type === "error"
 
         const bgClass = isSuccess
-          ? 'bg-emerald-900/95 border-emerald-500 text-white'
+          ? "bg-emerald-900/95 border-emerald-500 text-white"
           : isWarning
-          ? 'bg-amber-950/95 border-amber-500 text-white'
-          : isError
-          ? 'bg-red-950/95 border-red-500 text-white'
-          : 'bg-gray-900/95 border-gray-600 text-white'
+            ? "bg-amber-950/95 border-amber-500 text-white"
+            : isError
+              ? "bg-red-950/95 border-red-500 text-white"
+              : "bg-gray-900/95 border-gray-600 text-white"
 
         return (
           <div
@@ -31,15 +35,25 @@ export default function ToastContainer({ toasts, onDismiss }: Props) {
             role="alert"
           >
             <div className="flex-shrink-0 mt-0.5">
-              {isSuccess && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
-              {isWarning && <AlertTriangle className="w-5 h-5 text-amber-400" />}
+              {isSuccess && (
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              )}
+              {isWarning && (
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              )}
               {isError && <XCircle className="w-5 h-5 text-red-400" />}
-              {!isSuccess && !isWarning && !isError && <Info className="w-5 h-5 text-blue-400" />}
+              {!isSuccess && !isWarning && !isError && (
+                <Info className="w-5 h-5 text-blue-400" />
+              )}
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wider opacity-80">{toast.title}</p>
-              <p className="text-sm font-medium mt-0.5 text-gray-100 leading-snug">{toast.message}</p>
+              <p className="text-xs font-bold uppercase tracking-wider opacity-80">
+                {toast.title}
+              </p>
+              <p className="text-sm font-medium mt-0.5 text-gray-100 leading-snug">
+                {toast.message}
+              </p>
             </div>
 
             <button

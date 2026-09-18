@@ -1,31 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState } from "react"
 import {
   Bell,
   MapPin,
-  Building2,
   Clock,
   CheckCircle,
   XCircle,
-  Lock,
   Phone,
-  Droplet,
-  ShieldCheck,
-  Award,
-  ArrowRight,
   Volume2,
   VolumeX,
   Flame,
-  Sparkles,
-  AlertTriangle,
-  Mail,
-  ExternalLink,
   Copy,
   X,
-  Send,
-  Eye,
   Calendar,
-} from 'lucide-react'
-import type { CurrentUser, View, BloodRequest, SentEmailAlert } from '../types'
+  ShieldCheck,
+  Mail,
+  Eye,
+} from "lucide-react"
+import type { CurrentUser, View, BloodRequest, SentEmailAlert } from "../types"
 import {
   store,
   canDonate,
@@ -34,46 +25,56 @@ import {
   playNotificationSound,
   playEmergencyAlarm,
   generateDonorAlertEmail,
-} from '../store'
-import { formatRequestSchedule } from '../utils/dateSchedule'
-import BloodBadge from '../components/BloodBadge'
-import UrgencyBadge from '../components/UrgencyBadge'
-import UserAvatar from '../components/UserAvatar'
+} from "../store"
+import { formatRequestSchedule } from "../utils/dateSchedule"
+import BloodBadge from "../components/BloodBadge"
+import UrgencyBadge from "../components/UrgencyBadge"
+import UserAvatar from "../components/UserAvatar"
 
 interface Props {
   user: CurrentUser
   setView: (v: View) => void
-  onToast: (type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => void
+  onToast: (
+    type: "success" | "info" | "warning" | "error",
+    title: string,
+    message: string,
+  ) => void
 }
 
 export default function Notifications({ user, setView, onToast }: Props) {
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [selectedEmailAlert, setSelectedEmailAlert] = useState<SentEmailAlert | null>(null)
-  const [emailTab, setEmailTab] = useState<'preview' | 'code'>('preview')
+  const [selectedEmailAlert, setSelectedEmailAlert] =
+    useState<SentEmailAlert | null>(null)
+  const [emailTab, setEmailTab] = useState<"preview" | "code">("preview")
   const [, forceUpdate] = useState(0)
-  const refresh = () => forceUpdate(n => n + 1)
+  const refresh = () => forceUpdate((n) => n + 1)
 
   const donors = store.getDonors()
-  const userDigits = (user.phone || '').replace(/\D/g, '')
-  const userLast10 = userDigits.length >= 7 ? userDigits.slice(-10) : ''
+  const userDigits = (user.phone || "").replace(/\D/g, "")
+  const userLast10 = userDigits.length >= 7 ? userDigits.slice(-10) : ""
 
-  const myProfile = donors.find(d => {
+  const myProfile = donors.find((d) => {
     if (d.id === user.id) return true
     if (d.phone === user.phone) return true
     if (userLast10 && d.phone) {
-      const dDigits = d.phone.replace(/\D/g, '')
+      const dDigits = d.phone.replace(/\D/g, "")
       if (dDigits.slice(-10) === userLast10) return true
     }
-    if (user.email && d.email && d.email.toLowerCase() === user.email.toLowerCase()) return true
+    if (
+      user.email &&
+      d.email &&
+      d.email.toLowerCase() === user.email.toLowerCase()
+    )
+      return true
     return false
   }) || {
     id: user.id,
     name: user.name,
-    phone: user.phone || '',
-    email: user.email || '',
-    bloodGroup: user.bloodGroup || 'O+',
-    district: user.district || 'Ernakulam',
-    state: user.state || 'Kerala',
+    phone: user.phone || "",
+    email: user.email || "",
+    bloodGroup: user.bloodGroup || "O+",
+    district: user.district || "Ernakulam",
+    state: user.state || "Kerala",
     avatar: user.avatar,
     registeredAt: new Date().toISOString(),
     totalDonations: 0,
@@ -86,30 +87,49 @@ export default function Notifications({ user, setView, onToast }: Props) {
   const requests = store.getRequests()
 
   // Collect all requests that match this donor:
-  const myMatches = requests.filter(r => {
-    const rDigits = (r.requestorPhone || '').replace(/\D/g, '')
-    if (r.requestorId === myProfile.id || (userLast10 && rDigits.slice(-10) === userLast10) || (myProfile.phone && r.requestorPhone === myProfile.phone)) {
+  const myMatches = requests.filter((r) => {
+    const rDigits = (r.requestorPhone || "").replace(/\D/g, "")
+    if (
+      r.requestorId === myProfile.id ||
+      (userLast10 && rDigits.slice(-10) === userLast10) ||
+      (myProfile.phone && r.requestorPhone === myProfile.phone)
+    ) {
       return false
     }
 
-    const hasExplicitMatch = r.matches.some(m => m.donorId === myProfile.id || (myProfile.name && !myProfile.name.match(/^\d+$/) && m.donorName === myProfile.name))
+    const hasExplicitMatch = r.matches.some(
+      (m) =>
+        m.donorId === myProfile.id ||
+        (myProfile.name &&
+          !myProfile.name.match(/^\d+$/) &&
+          m.donorName === myProfile.name),
+    )
     if (hasExplicitMatch) return true
 
-    if (r.status === 'open') {
+    if (r.status === "open") {
       const compatible = COMPATIBLE_DONORS[r.bloodGroup] || []
       const isBloodCompatible = compatible.includes(myProfile.bloodGroup)
       if (!isBloodCompatible) return false
 
-      const reqDistrict = (r.district || '').trim().toLowerCase()
-      const myDistrict = (myProfile.district || '').trim().toLowerCase()
-      const reqState = (r.state || '').trim().toLowerCase()
-      const myState = (myProfile.state || '').trim().toLowerCase()
+      const reqDistrict = (r.district || "").trim().toLowerCase()
+      const myDistrict = (myProfile.district || "").trim().toLowerCase()
+      const reqState = (r.state || "").trim().toLowerCase()
+      const myState = (myProfile.state || "").trim().toLowerCase()
 
-      if (reqDistrict && myDistrict && (reqDistrict === myDistrict || reqDistrict.includes(myDistrict) || myDistrict.includes(reqDistrict))) {
+      if (
+        reqDistrict &&
+        myDistrict &&
+        (reqDistrict === myDistrict ||
+          reqDistrict.includes(myDistrict) ||
+          myDistrict.includes(reqDistrict))
+      ) {
         return true
       }
 
-      if (r.urgency === 'critical' && (reqState === myState || !reqDistrict || !myDistrict)) {
+      if (
+        r.urgency === "critical" &&
+        (reqState === myState || !reqDistrict || !myDistrict)
+      ) {
         return true
       }
     }
@@ -117,15 +137,19 @@ export default function Notifications({ user, setView, onToast }: Props) {
     return false
   })
 
-  const pending = myMatches.filter(r => {
-    const match = r.matches.find(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
-    if (!match && r.status === 'open') return true
-    return match?.status === 'pending'
+  const pending = myMatches.filter((r) => {
+    const match = r.matches.find(
+      (m) => m.donorId === myProfile.id || m.donorName === myProfile.name,
+    )
+    if (!match && r.status === "open") return true
+    return match?.status === "pending"
   })
 
-  const responded = myMatches.filter(r => {
-    const match = r.matches.find(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
-    return match?.status === 'accepted' || match?.status === 'declined'
+  const responded = myMatches.filter((r) => {
+    const match = r.matches.find(
+      (m) => m.donorId === myProfile.id || m.donorName === myProfile.name,
+    )
+    return match?.status === "accepted" || match?.status === "declined"
   })
 
   function respond(req: BloodRequest, accept: boolean) {
@@ -135,14 +159,20 @@ export default function Notifications({ user, setView, onToast }: Props) {
       }
     }
 
-    let existingMatch = req.matches.find(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
+    let existingMatch = req.matches.find(
+      (m) => m.donorId === myProfile.id || m.donorName === myProfile.name,
+    )
     let updatedMatches = [...req.matches]
 
     if (existingMatch) {
-      updatedMatches = updatedMatches.map(m =>
+      updatedMatches = updatedMatches.map((m) =>
         m.donorId === myProfile.id || m.donorName === myProfile.name
-          ? { ...m, status: accept ? 'accepted' : 'declined', respondedAt: new Date().toISOString() }
-          : m
+          ? {
+              ...m,
+              status: accept ? "accepted" : "declined",
+              respondedAt: new Date().toISOString(),
+            }
+          : m,
       )
     } else {
       updatedMatches.push({
@@ -151,7 +181,7 @@ export default function Notifications({ user, setView, onToast }: Props) {
         donorBloodGroup: myProfile.bloodGroup,
         donorDistrict: myProfile.district,
         donorAvatar: myProfile.avatar,
-        status: accept ? 'accepted' : 'declined',
+        status: accept ? "accepted" : "declined",
         notifiedAt: new Date().toISOString(),
         respondedAt: new Date().toISOString(),
       })
@@ -160,7 +190,7 @@ export default function Notifications({ user, setView, onToast }: Props) {
     const updated: BloodRequest = {
       ...req,
       matches: updatedMatches,
-      status: accept ? 'fulfilled' : req.status,
+      status: accept ? "fulfilled" : req.status,
     }
 
     if (accept) {
@@ -169,9 +199,17 @@ export default function Notifications({ user, setView, onToast }: Props) {
         lastDonation: new Date().toISOString(),
         totalDonations: (myProfile.totalDonations || 0) + 1,
       })
-      onToast('success', 'Blood Request Accepted!', `You accepted the request for ${req.patientName}. Requestor phone number is now revealed below.`)
+      onToast(
+        "success",
+        "Blood Request Accepted!",
+        `You accepted the request for ${req.patientName}. Requestor phone number is now revealed below.`,
+      )
     } else {
-      onToast('info', 'Request Declined', `You declined the request for ${req.patientName}.`)
+      onToast(
+        "info",
+        "Request Declined",
+        `You declined the request for ${req.patientName}.`,
+      )
     }
 
     store.updateRequest(updated)
@@ -180,7 +218,11 @@ export default function Notifications({ user, setView, onToast }: Props) {
 
   function handleTestAlarm() {
     playEmergencyAlarm()
-    onToast('warning', '🚨 Emergency Siren Test', 'Emergency alert siren is loud, active and functioning on your device!')
+    onToast(
+      "warning",
+      "🚨 Emergency Siren Test",
+      "Emergency alert siren is loud, active and functioning on your device!",
+    )
   }
 
   function handleOpenEmailAlert(req: BloodRequest) {
@@ -189,11 +231,16 @@ export default function Notifications({ user, setView, onToast }: Props) {
       setSelectedEmailAlert(existing)
     } else {
       // Generate preview alert on the fly
-      const { subject, htmlBody, plainText } = generateDonorAlertEmail(req, myProfile!)
+      const { subject, htmlBody, plainText } = generateDonorAlertEmail(
+        req,
+        myProfile!,
+      )
       setSelectedEmailAlert({
-        id: 'email-preview-' + req.id,
+        id: "email-preview-" + req.id,
         requestId: req.id,
-        recipientEmail: myProfile!.email || `${myProfile!.name.toLowerCase().replace(/\s+/g, '')}@example.com`,
+        recipientEmail:
+          myProfile!.email ||
+          `${myProfile!.name.toLowerCase().replace(/\s+/g, "")}@example.com`,
         recipientName: myProfile!.name,
         patientName: req.patientName,
         bloodGroup: req.bloodGroup,
@@ -205,7 +252,7 @@ export default function Notifications({ user, setView, onToast }: Props) {
         htmlBody,
         plainText,
         sentAt: req.createdAt,
-        status: 'delivered',
+        status: "delivered",
       })
     }
   }
@@ -224,11 +271,19 @@ export default function Notifications({ user, setView, onToast }: Props) {
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            <h1
+              className="text-2xl sm:text-3xl font-bold tracking-tight mb-1"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
               Match Notifications &amp; Email Alerts
             </h1>
             <p className="text-red-100 text-xs sm:text-sm">
-              Live alerts for <strong>{myProfile.district}{myProfile.state ? `, ${myProfile.state}` : ''}</strong> matching your <strong>{myProfile.bloodGroup}</strong> blood group.
+              Live alerts for{" "}
+              <strong>
+                {myProfile.district}
+                {myProfile.state ? `, ${myProfile.state}` : ""}
+              </strong>{" "}
+              matching your <strong>{myProfile.bloodGroup}</strong> blood group.
             </p>
           </div>
 
@@ -248,23 +303,37 @@ export default function Notifications({ user, setView, onToast }: Props) {
       </div>
 
       {/* Eligibility reminder banner */}
-      <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
-        eligible ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950' : 'bg-amber-50/90 border-amber-200 text-amber-950'
-      }`}>
+      <div
+        className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
+          eligible
+            ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+            : "bg-amber-50/90 border-amber-200 text-amber-950"
+        }`}
+      >
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            eligible ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'
-          }`}>
-            {eligible ? <ShieldCheck className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+          <div
+            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              eligible
+                ? "bg-emerald-200 text-emerald-800"
+                : "bg-amber-200 text-amber-800"
+            }`}
+          >
+            {eligible ? (
+              <ShieldCheck className="w-5 h-5" />
+            ) : (
+              <Clock className="w-5 h-5" />
+            )}
           </div>
           <div>
             <p className="font-bold text-sm">
-              {eligible ? 'Status: Fully Eligible & Ready to Donate' : 'Status: Medical 90-day Cooldown Interval'}
+              {eligible
+                ? "Status: Fully Eligible & Ready to Donate"
+                : "Status: Medical 90-day Cooldown Interval"}
             </p>
             <p className="text-xs opacity-80">
               {eligible
-                ? 'Your response immediately updates the patient and hospital in your district.'
-                : `Next eligible donation window opens on ${nextDate?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.`}
+                ? "Your response immediately updates the patient and hospital in your district."
+                : `Next eligible donation window opens on ${nextDate?.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}.`}
             </p>
           </div>
         </div>
@@ -273,10 +342,22 @@ export default function Notifications({ user, setView, onToast }: Props) {
           type="button"
           onClick={() => setSoundEnabled(!soundEnabled)}
           className="p-2 text-gray-500 hover:text-gray-700 rounded-xl hover:bg-white/50"
-          title={soundEnabled ? 'Mute notification sound' : 'Unmute notification sound'}
-          aria-label={soundEnabled ? 'Mute notification sound' : 'Unmute notification sound'}
+          title={
+            soundEnabled
+              ? "Mute notification sound"
+              : "Unmute notification sound"
+          }
+          aria-label={
+            soundEnabled
+              ? "Mute notification sound"
+              : "Unmute notification sound"
+          }
         >
-          {soundEnabled ? <Volume2 className="w-5 h-5 text-red-600" /> : <VolumeX className="w-5 h-5 text-gray-400" />}
+          {soundEnabled ? (
+            <Volume2 className="w-5 h-5 text-red-600" />
+          ) : (
+            <VolumeX className="w-5 h-5 text-gray-400" />
+          )}
         </button>
       </div>
 
@@ -286,9 +367,14 @@ export default function Notifications({ user, setView, onToast }: Props) {
           <div className="w-14 h-14 rounded-2xl bg-gray-50 text-gray-400 flex items-center justify-center mx-auto">
             <CheckCircle className="w-8 h-8 text-emerald-500" />
           </div>
-          <h3 className="font-bold text-gray-900 text-lg">No Active Emergency Requests in {myProfile.district}</h3>
+          <h3 className="font-bold text-gray-900 text-lg">
+            No Active Emergency Requests in {myProfile.district}
+          </h3>
           <p className="text-gray-500 text-xs max-w-sm mx-auto">
-            You are on standby. Whenever patients matching your {myProfile.bloodGroup} blood group require blood in {myProfile.district}, you will receive a situational email and instant notification.
+            You are on standby. Whenever patients matching your{" "}
+            {myProfile.bloodGroup} blood group require blood in{" "}
+            {myProfile.district}, you will receive a situational email and
+            instant notification.
           </p>
         </div>
       ) : (
@@ -303,7 +389,9 @@ export default function Notifications({ user, setView, onToast }: Props) {
                     Awaiting Your Response ({pending.length})
                   </h2>
                 </div>
-                <span className="text-[11px] text-gray-600">Fast responses save critical lives</span>
+                <span className="text-[11px] text-gray-600">
+                  Fast responses save critical lives
+                </span>
               </div>
 
               <div className="space-y-4">
@@ -323,11 +411,14 @@ export default function Notifications({ user, setView, onToast }: Props) {
                         />
                         <div>
                           <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <h3 className="text-lg sm:text-xl font-bold text-gray-900">{req.patientName}</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                              {req.patientName}
+                            </h3>
                             <UrgencyBadge urgency={req.urgency} size="sm" />
                           </div>
                           <p className="text-xs text-gray-600">
-                            Requested by <strong>{req.requestorName}</strong> · Hospital: <strong>{req.hospital}</strong>
+                            Requested by <strong>{req.requestorName}</strong> ·
+                            Hospital: <strong>{req.hospital}</strong>
                           </p>
                         </div>
                       </div>
@@ -339,9 +430,16 @@ export default function Notifications({ user, setView, onToast }: Props) {
                     <div className="p-3 rounded-2xl bg-red-50/70 border border-red-200/80 flex items-center justify-between flex-wrap gap-2 text-xs">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-red-700 flex-shrink-0" />
-                        <span className="text-gray-600 font-semibold">When Needed:</span>
+                        <span className="text-gray-600 font-semibold">
+                          When Needed:
+                        </span>
                         <span className="font-extrabold text-red-950">
-                          {formatRequestSchedule(req.requiredBy, req.neededDate, req.neededTime, req.urgency)}
+                          {formatRequestSchedule(
+                            req.requiredBy,
+                            req.neededDate,
+                            req.neededTime,
+                            req.urgency,
+                          )}
                         </span>
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-red-800 border border-red-200 uppercase">
@@ -351,26 +449,40 @@ export default function Notifications({ user, setView, onToast }: Props) {
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-gray-50 p-3.5 sm:p-4 rounded-2xl">
                       <div>
-                        <span className="text-gray-600 font-semibold block mb-0.5">District</span>
+                        <span className="text-gray-600 font-semibold block mb-0.5">
+                          District
+                        </span>
                         <span className="font-bold text-gray-800 flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-red-600 flex-shrink-0" /> {req.district}
+                          <MapPin className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />{" "}
+                          {req.district}
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-600 font-semibold block mb-0.5">Units Needed</span>
-                        <span className="font-bold text-gray-800">{req.unitsNeeded || 1} Unit(s)</span>
+                        <span className="text-gray-600 font-semibold block mb-0.5">
+                          Units Needed
+                        </span>
+                        <span className="font-bold text-gray-800">
+                          {req.unitsNeeded || 1} Unit(s)
+                        </span>
                       </div>
                       <div className="col-span-2 sm:col-span-1">
-                        <span className="text-gray-600 font-semibold block mb-0.5">Time of Broadcast</span>
+                        <span className="text-gray-600 font-semibold block mb-0.5">
+                          Time of Broadcast
+                        </span>
                         <span className="font-bold text-gray-800 flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" /> {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <Clock className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />{" "}
+                          {new Date(req.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
                       </div>
                     </div>
 
                     {req.notes && (
                       <div className="p-3 rounded-xl bg-red-50/50 border border-red-100 text-xs text-red-950">
-                        <span className="font-bold">Patient Notes: </span> {req.notes}
+                        <span className="font-bold">Patient Notes: </span>{" "}
+                        {req.notes}
                       </div>
                     )}
 
@@ -378,7 +490,10 @@ export default function Notifications({ user, setView, onToast }: Props) {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-red-50/70 border border-red-200/70 rounded-2xl text-xs">
                       <div className="flex items-center gap-2 text-gray-700">
                         <Mail className="w-4 h-4 text-red-600 flex-shrink-0" />
-                        <span>Situational email dispatched to <strong>{myProfile.email}</strong></span>
+                        <span>
+                          Situational email dispatched to{" "}
+                          <strong>{myProfile.email}</strong>
+                        </span>
                       </div>
                       <button
                         type="button"
@@ -395,7 +510,8 @@ export default function Notifications({ user, setView, onToast }: Props) {
                         onClick={() => respond(req, true)}
                         className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-md shadow-emerald-200 transition"
                       >
-                        <CheckCircle className="w-4 h-4" /> Accept &amp; Reveal Contact
+                        <CheckCircle className="w-4 h-4" /> Accept &amp; Reveal
+                        Contact
                       </button>
                       <button
                         onClick={() => respond(req, false)}
@@ -418,26 +534,40 @@ export default function Notifications({ user, setView, onToast }: Props) {
               </h2>
               <div className="space-y-3">
                 {responded.map((req) => {
-                  const match = req.matches.find(m => m.donorId === myProfile.id || m.donorName === myProfile.name)!
-                  const isAccepted = match?.status === 'accepted'
+                  const match = req.matches.find(
+                    (m) =>
+                      m.donorId === myProfile.id ||
+                      m.donorName === myProfile.name,
+                  )!
+                  const isAccepted = match?.status === "accepted"
 
                   return (
                     <div
                       key={req.id}
                       className={`p-4 sm:p-5 rounded-3xl border transition ${
-                        isAccepted ? 'bg-emerald-50/60 border-emerald-200' : 'bg-gray-50 border-gray-200 opacity-75'
+                        isAccepted
+                          ? "bg-emerald-50/60 border-emerald-200"
+                          : "bg-gray-50 border-gray-200 opacity-75"
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2 gap-3">
                         <div className="flex items-center gap-3">
-                          <UserAvatar src={req.requestorAvatar} name={req.requestorName} size="md" />
+                          <UserAvatar
+                            src={req.requestorAvatar}
+                            name={req.requestorName}
+                            size="md"
+                          />
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-bold text-gray-900 text-base">{req.patientName}</h3>
-                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full text-white ${
-                                isAccepted ? 'bg-emerald-600' : 'bg-gray-500'
-                              }`}>
-                                {isAccepted ? 'Accepted' : 'Declined'}
+                              <h3 className="font-bold text-gray-900 text-base">
+                                {req.patientName}
+                              </h3>
+                              <span
+                                className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full text-white ${
+                                  isAccepted ? "bg-emerald-600" : "bg-gray-500"
+                                }`}
+                              >
+                                {isAccepted ? "Accepted" : "Declined"}
                               </span>
                             </div>
                             <p className="text-xs text-gray-600 mt-0.5">
@@ -445,7 +575,15 @@ export default function Notifications({ user, setView, onToast }: Props) {
                             </p>
                             <p className="text-[11px] text-red-700 font-semibold mt-0.5 flex items-center gap-1">
                               <Calendar className="w-3 h-3 text-red-600 inline" />
-                              <span>Needed: {formatRequestSchedule(req.requiredBy, req.neededDate, req.neededTime, req.urgency)}</span>
+                              <span>
+                                Needed:{" "}
+                                {formatRequestSchedule(
+                                  req.requiredBy,
+                                  req.neededDate,
+                                  req.neededTime,
+                                  req.urgency,
+                                )}
+                              </span>
                             </p>
                           </div>
                         </div>
@@ -470,8 +608,12 @@ export default function Notifications({ user, setView, onToast }: Props) {
                           <div className="flex items-center gap-2.5 text-xs">
                             <Phone className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                             <div>
-                              <span className="text-gray-600 block">Patient / Hospital Contact:</span>
-                              <span className="font-bold text-emerald-950 text-base">{req.requestorPhone} ({req.requestorName})</span>
+                              <span className="text-gray-600 block">
+                                Patient / Hospital Contact:
+                              </span>
+                              <span className="font-bold text-emerald-950 text-base">
+                                {req.requestorPhone} ({req.requestorName})
+                              </span>
                             </div>
                           </div>
 
@@ -503,9 +645,12 @@ export default function Notifications({ user, setView, onToast }: Props) {
                   <Mail className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm sm:text-base leading-tight">Donor Emergency Email Alert</h3>
+                  <h3 className="font-bold text-sm sm:text-base leading-tight">
+                    Donor Emergency Email Alert
+                  </h3>
                   <p className="text-[11px] text-gray-300">
-                    Dispatched to {selectedEmailAlert.recipientEmail} ({selectedEmailAlert.recipientName})
+                    Dispatched to {selectedEmailAlert.recipientEmail} (
+                    {selectedEmailAlert.recipientName})
                   </p>
                 </div>
               </div>
@@ -514,18 +659,22 @@ export default function Notifications({ user, setView, onToast }: Props) {
                 <div className="flex bg-gray-800 rounded-xl p-0.5 text-xs font-semibold">
                   <button
                     type="button"
-                    onClick={() => setEmailTab('preview')}
+                    onClick={() => setEmailTab("preview")}
                     className={`px-3 py-1 rounded-lg transition ${
-                      emailTab === 'preview' ? 'bg-red-700 text-white' : 'text-gray-400 hover:text-white'
+                      emailTab === "preview"
+                        ? "bg-red-700 text-white"
+                        : "text-gray-400 hover:text-white"
                     }`}
                   >
                     HTML Preview
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEmailTab('code')}
+                    onClick={() => setEmailTab("code")}
                     className={`px-3 py-1 rounded-lg transition ${
-                      emailTab === 'code' ? 'bg-red-700 text-white' : 'text-gray-400 hover:text-white'
+                      emailTab === "code"
+                        ? "bg-red-700 text-white"
+                        : "text-gray-400 hover:text-white"
                     }`}
                   >
                     Plain Text
@@ -546,7 +695,9 @@ export default function Notifications({ user, setView, onToast }: Props) {
             <div className="px-5 py-3 bg-gray-100 border-b border-gray-200 text-xs flex items-center justify-between gap-2">
               <div className="truncate">
                 <span className="font-bold text-gray-600 mr-2">Subject:</span>
-                <span className="font-bold text-gray-900">{selectedEmailAlert.subject}</span>
+                <span className="font-bold text-gray-900">
+                  {selectedEmailAlert.subject}
+                </span>
               </div>
               <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px] uppercase flex-shrink-0">
                 Delivered
@@ -555,10 +706,12 @@ export default function Notifications({ user, setView, onToast }: Props) {
 
             {/* Email Content Body */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
-              {emailTab === 'preview' ? (
+              {emailTab === "preview" ? (
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                   <div
-                    dangerouslySetInnerHTML={{ __html: selectedEmailAlert.htmlBody }}
+                    dangerouslySetInnerHTML={{
+                      __html: selectedEmailAlert.htmlBody,
+                    }}
                     className="email-render-box"
                   />
                 </div>
@@ -572,13 +725,19 @@ export default function Notifications({ user, setView, onToast }: Props) {
             {/* Modal Footer */}
             <div className="p-4 bg-white border-t border-gray-200 flex items-center justify-between text-xs">
               <span className="text-gray-500">
-                Situational template based on <strong>{selectedEmailAlert.urgency.toUpperCase()}</strong> urgency.
+                Situational template based on{" "}
+                <strong>{selectedEmailAlert.urgency.toUpperCase()}</strong>{" "}
+                urgency.
               </span>
               <button
                 type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(selectedEmailAlert.plainText)
-                  onToast('success', 'Email Copied', 'Plain text email body copied to clipboard.')
+                  onToast(
+                    "success",
+                    "Email Copied",
+                    "Plain text email body copied to clipboard.",
+                  )
                 }}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold flex items-center gap-1.5 transition"
               >

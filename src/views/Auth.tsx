@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react"
 import {
   Heart,
   Mail,
@@ -24,47 +24,60 @@ import {
   Smartphone,
   Copy,
   CheckCheck,
-} from 'lucide-react'
-import type { BloodGroup, CurrentUser } from '../types'
-import { BLOOD_GROUPS, store, isValidEmail } from '../store'
-import { INDIAN_STATES_AND_DISTRICTS, getDistrictsForState, DEFAULT_STATE, DEFAULT_DISTRICT } from '../data/indianLocations'
-import { supabase, isSupabaseConfigured } from '../supabase'
+} from "lucide-react"
+import type { BloodGroup, CurrentUser } from "../types"
+import { BLOOD_GROUPS, store, isValidEmail } from "../store"
+import {
+  INDIAN_STATES_AND_DISTRICTS,
+  getDistrictsForState,
+  DEFAULT_STATE,
+  DEFAULT_DISTRICT,
+} from "../data/indianLocations"
+import { supabase, isSupabaseConfigured } from "../supabase"
 
 interface Props {
   onLogin: (user: CurrentUser) => void
 }
 
 export default function Auth({ onLogin }: Props) {
-  const [tab, setTab] = useState<'signin' | 'signup'>('signin')
+  const [tab, setTab] = useState<"signin" | "signup">("signin")
 
   // Sign In fields
-  const [signInIdentifier, setSignInIdentifier] = useState('')
-  const [signInPassword, setSignInPassword] = useState('')
+  const [signInIdentifier, setSignInIdentifier] = useState("")
+  const [signInPassword, setSignInPassword] = useState("")
 
   // Sign Up fields
-  const [signUpStep, setSignUpStep] = useState<'info' | 'otp' | 'details'>('info')
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [otpCode, setOtpCode] = useState('')
+  const [signUpStep, setSignUpStep] = useState<"info" | "otp" | "details">(
+    "info",
+  )
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
+  const [otpCode, setOtpCode] = useState("")
   const [otpCountdown, setOtpCountdown] = useState(0)
   const [isPhoneConfirmed, setIsPhoneConfirmed] = useState(false)
-  const [incomingSmsPreview, setIncomingSmsPreview] = useState<{ code: string; phone: string; time: string } | null>(null)
+  const [incomingSmsPreview, setIncomingSmsPreview] = useState<{
+    code: string
+    phone: string
+    time: string
+  } | null>(null)
   const [copiedCode, setCopiedCode] = useState(false)
 
   // Step 3 details
-  const [password, setPassword] = useState('')
+  const [password, setPassword] = useState("")
   const [isVolunteerDonor, setIsVolunteerDonor] = useState(false)
-  const [bloodGroup, setBloodGroup] = useState<BloodGroup>('O+')
+  const [bloodGroup, setBloodGroup] = useState<BloodGroup>("O+")
   const [state, setState] = useState(DEFAULT_STATE)
-  const [district, setDistrict] = useState('Ernakulam')
+  const [district, setDistrict] = useState("Ernakulam")
 
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [unconfirmedAccount, setUnconfirmedAccount] = useState<string | null>(null)
+  const [error, setError] = useState("")
+  const [unconfirmedAccount, setUnconfirmedAccount] = useState<string | null>(
+    null,
+  )
   const [resendLoading, setResendLoading] = useState(false)
-  const [resendSuccess, setResendSuccess] = useState('')
+  const [resendSuccess, setResendSuccess] = useState("")
 
   const availableDistricts = getDistrictsForState(state)
 
@@ -72,7 +85,7 @@ export default function Auth({ onLogin }: Props) {
   useEffect(() => {
     if (otpCountdown <= 0) return
     const timer = setInterval(() => {
-      setOtpCountdown(c => (c > 0 ? c - 1 : 0))
+      setOtpCountdown((c) => (c > 0 ? c - 1 : 0))
     }, 1000)
     return () => clearInterval(timer)
   }, [otpCountdown])
@@ -81,29 +94,34 @@ export default function Auth({ onLogin }: Props) {
     setState(newState)
     const dists = getDistrictsForState(newState)
     if (!dists.includes(district)) {
-      setDistrict(dists[0] || '')
+      setDistrict(dists[0] || "")
     }
   }
 
   // Format phone number to clean string
   function formatPhoneNumber(rawPhone: string): string {
-    const cleaned = rawPhone.trim().replace(/[^\d+]/g, '')
-    if (cleaned.startsWith('+')) return cleaned
+    const cleaned = rawPhone.trim().replace(/[^\d+]/g, "")
+    if (cleaned.startsWith("+")) return cleaned
     if (cleaned.length === 10) return `+91${cleaned}`
     return cleaned
   }
 
   // Resend verification SMS for unconfirmed login accounts
   async function handleResendConfirmation(target?: string) {
-    const targetToUse = (target || unconfirmedAccount || signInIdentifier || phone).trim()
+    const targetToUse = (
+      target ||
+      unconfirmedAccount ||
+      signInIdentifier ||
+      phone
+    ).trim()
     if (!targetToUse) {
-      setError('Please enter your phone number to resend SMS code.')
+      setError("Please enter your phone number to resend SMS code.")
       return
     }
 
     setResendLoading(true)
-    setResendSuccess('')
-    setError('')
+    setResendSuccess("")
+    setError("")
 
     try {
       const formatted = formatPhoneNumber(targetToUse)
@@ -112,7 +130,10 @@ export default function Auth({ onLogin }: Props) {
       setIncomingSmsPreview({
         code: otpRecord.code,
         phone: formatted,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       })
 
       if (isSupabaseConfigured) {
@@ -121,13 +142,15 @@ export default function Auth({ onLogin }: Props) {
             phone: formatted,
           })
         } catch (sbErr) {
-          console.warn('Supabase SMS resend error:', sbErr)
+          console.warn("Supabase SMS resend error:", sbErr)
         }
       }
 
       setResendSuccess(`SMS verification code sent to ${formatted}!`)
     } catch (err: any) {
-      setError(err?.message || 'Failed to resend confirmation SMS. Please try again.')
+      setError(
+        err?.message || "Failed to resend confirmation SMS. Please try again.",
+      )
     } finally {
       setResendLoading(false)
     }
@@ -139,17 +162,27 @@ export default function Auth({ onLogin }: Props) {
     if (!identifier) return
 
     setLoading(true)
-    setError('')
+    setError("")
 
-    const isEmail = identifier.includes('@')
-    const cleanDigits = identifier.replace(/\D/g, '')
-    const last10 = cleanDigits.length >= 7 ? cleanDigits.slice(-10) : ''
+    const isEmail = identifier.includes("@")
+    const cleanDigits = identifier.replace(/\D/g, "")
+    const last10 = cleanDigits.length >= 7 ? cleanDigits.slice(-10) : ""
 
     try {
       if (isSupabaseConfigured) {
         const query = isEmail
-          ? supabase.from('profiles').select('*').ilike('email', identifier).limit(1)
-          : supabase.from('profiles').select('*').or(`phone.ilike.%${last10 || identifier}%,email.ilike.%${last10 || identifier}%`).limit(1)
+          ? supabase
+              .from("profiles")
+              .select("*")
+              .ilike("email", identifier)
+              .limit(1)
+          : supabase
+              .from("profiles")
+              .select("*")
+              .or(
+                `phone.ilike.%${last10 || identifier}%,email.ilike.%${last10 || identifier}%`,
+              )
+              .limit(1)
 
         const { data: profiles } = await query
 
@@ -157,9 +190,12 @@ export default function Auth({ onLogin }: Props) {
           const profile = profiles[0]
           const loggedInUser: CurrentUser = {
             id: profile.id,
-            name: profile.name || identifier.split('@')[0],
-            email: profile.email || (isEmail ? identifier : `${cleanDigits || identifier}@blink.org`),
-            phone: profile.phone || (isEmail ? '' : formatPhoneNumber(identifier)),
+            name: profile.name || identifier.split("@")[0],
+            email:
+              profile.email ||
+              (isEmail ? identifier : `${cleanDigits || identifier}@blink.org`),
+            phone:
+              profile.phone || (isEmail ? "" : formatPhoneNumber(identifier)),
             avatar: profile.avatar,
             state: profile.state || DEFAULT_STATE,
             district: profile.district || DEFAULT_DISTRICT,
@@ -173,7 +209,7 @@ export default function Auth({ onLogin }: Props) {
             loggedInUser.avatar,
             loggedInUser.bloodGroup,
             loggedInUser.district,
-            loggedInUser.state
+            loggedInUser.state,
           )
           store.setCurrentUser(loggedInUser)
           onLogin(loggedInUser)
@@ -183,11 +219,16 @@ export default function Auth({ onLogin }: Props) {
 
       // Check local store users
       const users = store.getUsers()
-      const existing = users.find(u => {
-        if (isEmail && u.email && u.email.toLowerCase() === identifier.toLowerCase()) return true
+      const existing = users.find((u) => {
+        if (
+          isEmail &&
+          u.email &&
+          u.email.toLowerCase() === identifier.toLowerCase()
+        )
+          return true
         if (u.phone === identifier) return true
         if (last10 && u.phone) {
-          const uDigits = u.phone.replace(/\D/g, '')
+          const uDigits = u.phone.replace(/\D/g, "")
           if (uDigits.slice(-10) === last10) return true
         }
         if (last10 && u.email && u.email.includes(last10)) return true
@@ -202,11 +243,16 @@ export default function Auth({ onLogin }: Props) {
 
       // Check local store donors
       const donors = store.getDonors()
-      const donorMatch = donors.find(d => {
-        if (isEmail && d.email && d.email.toLowerCase() === identifier.toLowerCase()) return true
+      const donorMatch = donors.find((d) => {
+        if (
+          isEmail &&
+          d.email &&
+          d.email.toLowerCase() === identifier.toLowerCase()
+        )
+          return true
         if (d.phone === identifier) return true
         if (last10 && d.phone) {
-          const dDigits = d.phone.replace(/\D/g, '')
+          const dDigits = d.phone.replace(/\D/g, "")
           if (dDigits.slice(-10) === last10) return true
         }
         return false
@@ -230,23 +276,25 @@ export default function Auth({ onLogin }: Props) {
           undefined,
           userFromDonor.bloodGroup,
           userFromDonor.district,
-          userFromDonor.state
+          userFromDonor.state,
         )
         store.setCurrentUser(userFromDonor)
         onLogin(userFromDonor)
         return
       }
 
-      const formattedPhone = isEmail ? '+91 98765 43210' : formatPhoneNumber(identifier)
+      const formattedPhone = isEmail
+        ? "+91 98765 43210"
+        : formatPhoneNumber(identifier)
       const newUser = store.addUser(
-        identifier.split('@')[0],
+        identifier.split("@")[0],
         formattedPhone,
-        isEmail ? identifier : `${cleanDigits || identifier}@blink.org`
+        isEmail ? identifier : `${cleanDigits || identifier}@blink.org`,
       )
       store.setCurrentUser(newUser)
       onLogin(newUser)
     } catch (err: any) {
-      setError(err?.message || 'Could not sign in directly.')
+      setError(err?.message || "Could not sign in directly.")
     } finally {
       setLoading(false)
     }
@@ -257,16 +305,16 @@ export default function Auth({ onLogin }: Props) {
     e.preventDefault()
     const trimmedIdentifier = signInIdentifier.trim()
     if (!trimmedIdentifier || !signInPassword.trim()) {
-      return setError('Please enter your phone number or email and password.')
+      return setError("Please enter your phone number or email and password.")
     }
-    setError('')
+    setError("")
     setUnconfirmedAccount(null)
-    setResendSuccess('')
+    setResendSuccess("")
     setLoading(true)
 
-    const isEmail = trimmedIdentifier.includes('@')
-    const cleanDigits = trimmedIdentifier.replace(/\D/g, '')
-    const last10 = cleanDigits.length >= 7 ? cleanDigits.slice(-10) : ''
+    const isEmail = trimmedIdentifier.includes("@")
+    const cleanDigits = trimmedIdentifier.replace(/\D/g, "")
+    const last10 = cleanDigits.length >= 7 ? cleanDigits.slice(-10) : ""
 
     try {
       let authUser: any = null
@@ -283,20 +331,20 @@ export default function Auth({ onLogin }: Props) {
           if (last10.length >= 7) {
             try {
               const { data: matchedProfiles } = await supabase
-                .from('profiles')
-                .select('*')
+                .from("profiles")
+                .select("*")
                 .or(`phone.ilike.%${last10}%,email.ilike.%${last10}%`)
                 .limit(5)
 
               if (matchedProfiles && matchedProfiles.length > 0) {
                 for (const p of matchedProfiles) {
-                  if (p.email && p.email.includes('@')) {
+                  if (p.email && p.email.includes("@")) {
                     candidates.push({ email: p.email.toLowerCase() })
                   }
                 }
               }
             } catch (pErr) {
-              console.warn('Profile search lookup notice:', pErr)
+              console.warn("Profile search lookup notice:", pErr)
             }
           }
 
@@ -339,15 +387,17 @@ export default function Auth({ onLogin }: Props) {
               authUser = authResult.data.user
               break
             } else if (authResult.error) {
-              const errMsg = (authResult.error.message || '').toLowerCase()
+              const errMsg = (authResult.error.message || "").toLowerCase()
               if (
-                errMsg.includes('phone not confirmed') ||
-                errMsg.includes('email not confirmed') ||
-                errMsg.includes('not confirmed') ||
-                (authResult.error as any).code === 'otp_expired'
+                errMsg.includes("phone not confirmed") ||
+                errMsg.includes("email not confirmed") ||
+                errMsg.includes("not confirmed") ||
+                (authResult.error as any).code === "otp_expired"
               ) {
                 setUnconfirmedAccount(trimmedIdentifier)
-                setError('Account verification pending. Please verify or sign in directly below.')
+                setError(
+                  "Account verification pending. Please verify or sign in directly below.",
+                )
                 setLoading(false)
                 return
               }
@@ -362,9 +412,9 @@ export default function Auth({ onLogin }: Props) {
         if (authUser) {
           try {
             const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', authUser.id)
+              .from("profiles")
+              .select("*")
+              .eq("id", authUser.id)
               .single()
             authProfile = profile
           } catch {
@@ -373,9 +423,20 @@ export default function Auth({ onLogin }: Props) {
 
           const loggedInUser: CurrentUser = {
             id: authUser.id,
-            name: authProfile?.name || authUser.user_metadata?.name || trimmedIdentifier.split('@')[0],
-            email: authProfile?.email || authUser.email || (isEmail ? trimmedIdentifier : `${cleanDigits || trimmedIdentifier}@blink.org`),
-            phone: authProfile?.phone || authUser.phone || (isEmail ? '' : formatPhoneNumber(trimmedIdentifier)),
+            name:
+              authProfile?.name ||
+              authUser.user_metadata?.name ||
+              trimmedIdentifier.split("@")[0],
+            email:
+              authProfile?.email ||
+              authUser.email ||
+              (isEmail
+                ? trimmedIdentifier
+                : `${cleanDigits || trimmedIdentifier}@blink.org`),
+            phone:
+              authProfile?.phone ||
+              authUser.phone ||
+              (isEmail ? "" : formatPhoneNumber(trimmedIdentifier)),
             avatar: authProfile?.avatar,
             state: authProfile?.state || DEFAULT_STATE,
             district: authProfile?.district || DEFAULT_DISTRICT,
@@ -390,7 +451,7 @@ export default function Auth({ onLogin }: Props) {
             loggedInUser.avatar,
             loggedInUser.bloodGroup,
             loggedInUser.district,
-            loggedInUser.state
+            loggedInUser.state,
           )
           store.setCurrentUser(loggedInUser)
           onLogin(loggedInUser)
@@ -401,17 +462,31 @@ export default function Auth({ onLogin }: Props) {
         if (last10.length >= 7 || isEmail) {
           try {
             const query = isEmail
-              ? supabase.from('profiles').select('*').ilike('email', trimmedIdentifier).limit(1)
-              : supabase.from('profiles').select('*').or(`phone.ilike.%${last10}%,email.ilike.%${last10}%`).limit(1)
+              ? supabase
+                  .from("profiles")
+                  .select("*")
+                  .ilike("email", trimmedIdentifier)
+                  .limit(1)
+              : supabase
+                  .from("profiles")
+                  .select("*")
+                  .or(`phone.ilike.%${last10}%,email.ilike.%${last10}%`)
+                  .limit(1)
 
             const { data: dbProfiles } = await query
             if (dbProfiles && dbProfiles.length > 0) {
               const profile = dbProfiles[0]
               const loggedInUser: CurrentUser = {
                 id: profile.id,
-                name: profile.name || trimmedIdentifier.split('@')[0],
-                email: profile.email || (isEmail ? trimmedIdentifier : `${cleanDigits || last10}@blink.org`),
-                phone: profile.phone || (isEmail ? '' : formatPhoneNumber(trimmedIdentifier)),
+                name: profile.name || trimmedIdentifier.split("@")[0],
+                email:
+                  profile.email ||
+                  (isEmail
+                    ? trimmedIdentifier
+                    : `${cleanDigits || last10}@blink.org`),
+                phone:
+                  profile.phone ||
+                  (isEmail ? "" : formatPhoneNumber(trimmedIdentifier)),
                 avatar: profile.avatar,
                 state: profile.state || DEFAULT_STATE,
                 district: profile.district || DEFAULT_DISTRICT,
@@ -426,25 +501,30 @@ export default function Auth({ onLogin }: Props) {
                 loggedInUser.avatar,
                 loggedInUser.bloodGroup,
                 loggedInUser.district,
-                loggedInUser.state
+                loggedInUser.state,
               )
               store.setCurrentUser(loggedInUser)
               onLogin(loggedInUser)
               return
             }
           } catch (dbErr) {
-            console.warn('DB profile lookup fallback notice:', dbErr)
+            console.warn("DB profile lookup fallback notice:", dbErr)
           }
         }
       }
 
       // Local / Offline auth fallback
       const users = store.getUsers()
-      const existing = users.find(u => {
-        if (isEmail && u.email && u.email.toLowerCase() === trimmedIdentifier.toLowerCase()) return true
+      const existing = users.find((u) => {
+        if (
+          isEmail &&
+          u.email &&
+          u.email.toLowerCase() === trimmedIdentifier.toLowerCase()
+        )
+          return true
         if (u.phone === trimmedIdentifier) return true
         if (last10 && u.phone) {
-          const uDigits = u.phone.replace(/\D/g, '')
+          const uDigits = u.phone.replace(/\D/g, "")
           if (uDigits.slice(-10) === last10) return true
         }
         if (last10 && u.email && u.email.includes(last10)) return true
@@ -459,11 +539,16 @@ export default function Auth({ onLogin }: Props) {
 
       // Check donors
       const donors = store.getDonors()
-      const donorMatch = donors.find(d => {
-        if (isEmail && d.email && d.email.toLowerCase() === trimmedIdentifier.toLowerCase()) return true
+      const donorMatch = donors.find((d) => {
+        if (
+          isEmail &&
+          d.email &&
+          d.email.toLowerCase() === trimmedIdentifier.toLowerCase()
+        )
+          return true
         if (d.phone === trimmedIdentifier) return true
         if (last10 && d.phone) {
-          const dDigits = d.phone.replace(/\D/g, '')
+          const dDigits = d.phone.replace(/\D/g, "")
           if (dDigits.slice(-10) === last10) return true
         }
         return false
@@ -487,7 +572,7 @@ export default function Auth({ onLogin }: Props) {
           undefined,
           userFromDonor.bloodGroup,
           userFromDonor.district,
-          userFromDonor.state
+          userFromDonor.state,
         )
         store.setCurrentUser(userFromDonor)
         onLogin(userFromDonor)
@@ -495,19 +580,23 @@ export default function Auth({ onLogin }: Props) {
       }
 
       // If totally new, create session and log in
-      const formattedPhone = isEmail ? '+91 98765 43210' : formatPhoneNumber(trimmedIdentifier)
+      const formattedPhone = isEmail
+        ? "+91 98765 43210"
+        : formatPhoneNumber(trimmedIdentifier)
       const user = store.addUser(
-        trimmedIdentifier.split('@')[0],
+        trimmedIdentifier.split("@")[0],
         formattedPhone,
-        isEmail ? trimmedIdentifier : `${cleanDigits || last10}@blink.org`
+        isEmail ? trimmedIdentifier : `${cleanDigits || last10}@blink.org`,
       )
       store.setCurrentUser(user)
       onLogin(user)
     } catch (err: any) {
-      const msg = err?.message || 'Invalid credentials. Please try again.'
-      if (msg.toLowerCase().includes('not confirmed')) {
+      const msg = err?.message || "Invalid credentials. Please try again."
+      if (msg.toLowerCase().includes("not confirmed")) {
         setUnconfirmedAccount(signInIdentifier.trim())
-        setError('Your account is not confirmed yet. You can resend SMS verification or continue directly.')
+        setError(
+          "Your account is not confirmed yet. You can resend SMS verification or continue directly.",
+        )
       } else {
         setError(msg)
       }
@@ -523,16 +612,18 @@ export default function Auth({ onLogin }: Props) {
     const trimmedPhone = phone.trim()
     const trimmedEmail = email.trim()
 
-    if (!trimmedName) return setError('Please enter your full name.')
-    if (!trimmedPhone || trimmedPhone.replace(/\D/g, '').length < 10) {
-      return setError('Please enter a valid 10-digit mobile phone number.')
+    if (!trimmedName) return setError("Please enter your full name.")
+    if (!trimmedPhone || trimmedPhone.replace(/\D/g, "").length < 10) {
+      return setError("Please enter a valid 10-digit mobile phone number.")
     }
     if (trimmedEmail && !isValidEmail(trimmedEmail)) {
-      return setError('Invalid email format. Please enter a valid address (e.g. name@example.com).')
+      return setError(
+        "Invalid email format. Please enter a valid address (e.g. name@example.com).",
+      )
     }
 
     const formattedPhone = formatPhoneNumber(trimmedPhone)
-    setError('')
+    setError("")
     setLoading(true)
 
     try {
@@ -543,7 +634,10 @@ export default function Auth({ onLogin }: Props) {
       setIncomingSmsPreview({
         code: otpRecord.code,
         phone: formattedPhone,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       })
 
       // 3. Dispatch OTP via Supabase SMS Auth if configured
@@ -557,18 +651,21 @@ export default function Auth({ onLogin }: Props) {
             },
           })
           if (sbErr) {
-            console.warn('Supabase SMS OTP dispatch notice:', sbErr)
+            console.warn("Supabase SMS OTP dispatch notice:", sbErr)
           }
         } catch (sbErr) {
-          console.warn('Supabase SMS dispatch exception:', sbErr)
+          console.warn("Supabase SMS dispatch exception:", sbErr)
         }
       }
 
       setOtpCountdown(30)
-      setSignUpStep('otp')
-      setOtpCode('')
+      setSignUpStep("otp")
+      setOtpCode("")
     } catch (err: any) {
-      setError(err?.message || 'Failed to send SMS verification code. Please check your phone number and try again.')
+      setError(
+        err?.message ||
+          "Failed to send SMS verification code. Please check your phone number and try again.",
+      )
     } finally {
       setLoading(false)
     }
@@ -581,10 +678,12 @@ export default function Auth({ onLogin }: Props) {
     const formattedPhone = formatPhoneNumber(phone)
 
     if (!trimmedOtp || trimmedOtp.length !== 6) {
-      return setError('Please enter the full 6-digit SMS verification code sent to your phone.')
+      return setError(
+        "Please enter the full 6-digit SMS verification code sent to your phone.",
+      )
     }
 
-    setError('')
+    setError("")
     setLoading(true)
 
     try {
@@ -594,31 +693,37 @@ export default function Auth({ onLogin }: Props) {
           const { error: smsVerifyErr } = await supabase.auth.verifyOtp({
             phone: formattedPhone,
             token: trimmedOtp,
-            type: 'sms',
+            type: "sms",
           })
 
           if (!smsVerifyErr) {
             setIsPhoneConfirmed(true)
-            setSignUpStep('details')
+            setSignUpStep("details")
             return
           }
         } catch (sbVerifyErr) {
-          console.warn('Supabase SMS verifyOtp notice:', sbVerifyErr)
+          console.warn("Supabase SMS verifyOtp notice:", sbVerifyErr)
         }
       }
 
       // Local store verification fallback
       const result = store.verifyPhoneOtp(formattedPhone, trimmedOtp)
       if (!result.success) {
-        setError(result.error || 'Invalid or expired SMS confirmation code. Please check the code or resend.')
+        setError(
+          result.error ||
+            "Invalid or expired SMS confirmation code. Please check the code or resend.",
+        )
         setLoading(false)
         return
       }
 
       setIsPhoneConfirmed(true)
-      setSignUpStep('details')
+      setSignUpStep("details")
     } catch (err: any) {
-      setError(err?.message || 'SMS verification failed. Please check the code and try again.')
+      setError(
+        err?.message ||
+          "SMS verification failed. Please check the code and try again.",
+      )
     } finally {
       setLoading(false)
     }
@@ -627,13 +732,13 @@ export default function Auth({ onLogin }: Props) {
   // Bypass verification if needed for instant testing
   function handleBypassPhoneVerification() {
     setIsPhoneConfirmed(true)
-    setSignUpStep('details')
+    setSignUpStep("details")
   }
 
   // Resend SMS OTP in Step 2
   async function handleResendOtp() {
     if (otpCountdown > 0) return
-    setError('')
+    setError("")
     setResendLoading(true)
 
     try {
@@ -643,7 +748,10 @@ export default function Auth({ onLogin }: Props) {
       setIncomingSmsPreview({
         code: otpRecord.code,
         phone: formattedPhone,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       })
 
       if (isSupabaseConfigured) {
@@ -656,14 +764,14 @@ export default function Auth({ onLogin }: Props) {
             },
           })
         } catch (sbErr) {
-          console.warn('Supabase SMS OTP resend notice:', sbErr)
+          console.warn("Supabase SMS OTP resend notice:", sbErr)
         }
       }
 
       setOtpCountdown(45)
       setResendSuccess(`New 6-digit SMS code dispatched to ${formattedPhone}!`)
     } catch (err: any) {
-      setError(err?.message || 'Failed to resend SMS code.')
+      setError(err?.message || "Failed to resend SMS code.")
     } finally {
       setResendLoading(false)
     }
@@ -679,33 +787,38 @@ export default function Auth({ onLogin }: Props) {
   // Step 3: Complete Final Sign Up with Verified Phone
   async function handleCompleteSignUp(e: React.FormEvent) {
     e.preventDefault()
-    if (!password || password.length < 6) return setError('Password must be at least 6 characters.')
+    if (!password || password.length < 6)
+      return setError("Password must be at least 6 characters.")
 
-    setError('')
+    setError("")
     setLoading(true)
 
     try {
       const formattedPhone = formatPhoneNumber(phone)
-      const cleanDigits = phone.replace(/\D/g, '')
+      const cleanDigits = phone.replace(/\D/g, "")
       const trimmedName = name.trim()
       const trimmedEmail = email.trim() || `${cleanDigits}@blink.org`
-      let authUserId = ''
+      let authUserId = ""
 
       if (isSupabaseConfigured) {
         // Sign up with Supabase using email alias first (supported out-of-the-box without SMS provider setup)
         try {
-          const { data: emailData, error: emailAuthErr } = await supabase.auth.signUp({
-            email: trimmedEmail,
-            password,
-            options: {
-              data: {
-                name: trimmedName,
-                phone: formattedPhone,
+          const { data: emailData, error: emailAuthErr } =
+            await supabase.auth.signUp({
+              email: trimmedEmail,
+              password,
+              options: {
+                data: {
+                  name: trimmedName,
+                  phone: formattedPhone,
+                },
               },
-            },
-          })
+            })
 
-          if (emailAuthErr && !emailAuthErr.message.toLowerCase().includes('already registered')) {
+          if (
+            emailAuthErr &&
+            !emailAuthErr.message.toLowerCase().includes("already registered")
+          ) {
             // Also try phone signup if configured
             const { data: phoneData } = await supabase.auth.signUp({
               phone: formattedPhone,
@@ -717,18 +830,18 @@ export default function Auth({ onLogin }: Props) {
                 },
               },
             })
-            authUserId = phoneData?.user?.id || ''
+            authUserId = phoneData?.user?.id || ""
           } else {
-            authUserId = emailData?.user?.id || ''
+            authUserId = emailData?.user?.id || ""
           }
         } catch (signUpErr) {
-          console.warn('Supabase sign up warning:', signUpErr)
+          console.warn("Supabase sign up warning:", signUpErr)
         }
 
         const userId = authUserId || Math.random().toString(36).slice(2)
 
         try {
-          await supabase.from('profiles').upsert({
+          await supabase.from("profiles").upsert({
             id: userId,
             name: trimmedName,
             email: trimmedEmail,
@@ -740,7 +853,7 @@ export default function Auth({ onLogin }: Props) {
           })
 
           if (isVolunteerDonor) {
-            await supabase.from('donors').upsert({
+            await supabase.from("donors").upsert({
               id: userId,
               user_id: userId,
               name: trimmedName,
@@ -753,7 +866,7 @@ export default function Auth({ onLogin }: Props) {
             })
           }
         } catch (dbErr) {
-          console.warn('Supabase profile upsert notice:', dbErr)
+          console.warn("Supabase profile upsert notice:", dbErr)
         }
       }
 
@@ -765,7 +878,7 @@ export default function Auth({ onLogin }: Props) {
         undefined,
         isVolunteerDonor ? bloodGroup : undefined,
         district,
-        state || DEFAULT_STATE
+        state || DEFAULT_STATE,
       )
       if (authUserId) {
         newUser.id = authUserId
@@ -789,7 +902,9 @@ export default function Auth({ onLogin }: Props) {
       store.setCurrentUser(newUser)
       onLogin(newUser)
     } catch (err: any) {
-      setError(err?.message || 'Account creation failed. Please check your inputs.')
+      setError(
+        err?.message || "Account creation failed. Please check your inputs.",
+      )
     } finally {
       setLoading(false)
     }
@@ -804,7 +919,10 @@ export default function Auth({ onLogin }: Props) {
             <Heart className="w-5 h-5 text-white fill-white" />
           </div>
           <div>
-            <span className="text-xl sm:text-2xl font-bold tracking-tight block leading-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            <span
+              className="text-xl sm:text-2xl font-bold tracking-tight block leading-tight"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
               B-Link
             </span>
             <span className="text-[9px] uppercase font-bold tracking-widest text-red-200 block">
@@ -822,11 +940,15 @@ export default function Auth({ onLogin }: Props) {
             <Sparkles className="w-3 h-3 text-yellow-300" />
             <span>Emergency Blood Matching</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          <h1
+            className="text-2xl sm:text-3xl font-bold tracking-tight text-white"
+            style={{ fontFamily: "'DM Serif Display', serif" }}
+          >
             Save lives with complete privacy.
           </h1>
           <p className="text-xs text-red-100 mt-1 max-w-xs mx-auto">
-            Connect patients with local verified donors in urgent hospital emergencies.
+            Connect patients with local verified donors in urgent hospital
+            emergencies.
           </p>
         </div>
 
@@ -836,22 +958,30 @@ export default function Auth({ onLogin }: Props) {
           <div className="flex rounded-2xl bg-gray-100 p-1 mb-5">
             <button
               type="button"
-              onClick={() => { setTab('signin'); setError(''); setResendSuccess('') }}
+              onClick={() => {
+                setTab("signin")
+                setError("")
+                setResendSuccess("")
+              }}
               className={`flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition ${
-                tab === 'signin'
-                  ? 'bg-white text-red-800 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800'
+                tab === "signin"
+                  ? "bg-white text-red-800 shadow-sm"
+                  : "text-gray-500 hover:text-gray-800"
               }`}
             >
               Sign In
             </button>
             <button
               type="button"
-              onClick={() => { setTab('signup'); setError(''); setResendSuccess('') }}
+              onClick={() => {
+                setTab("signup")
+                setError("")
+                setResendSuccess("")
+              }}
               className={`flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition ${
-                tab === 'signup'
-                  ? 'bg-white text-red-800 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800'
+                tab === "signup"
+                  ? "bg-white text-red-800 shadow-sm"
+                  : "text-gray-500 hover:text-gray-800"
               }`}
             >
               Create Account
@@ -882,9 +1012,15 @@ export default function Auth({ onLogin }: Props) {
                   <Smartphone className="w-4 h-4" />
                 </div>
                 <div className="text-xs">
-                  <p className="font-bold text-amber-950 text-sm">SMS Verification Required</p>
+                  <p className="font-bold text-amber-950 text-sm">
+                    SMS Verification Required
+                  </p>
                   <p className="text-amber-900 mt-1 leading-relaxed">
-                    Account verification is required before signing in for <span className="font-semibold text-gray-950">{unconfirmedAccount}</span>.
+                    Account verification is required before signing in for{" "}
+                    <span className="font-semibold text-gray-950">
+                      {unconfirmedAccount}
+                    </span>
+                    .
                   </p>
                 </div>
               </div>
@@ -901,7 +1037,7 @@ export default function Auth({ onLogin }: Props) {
                   ) : (
                     <Send className="w-3.5 h-3.5" />
                   )}
-                  {resendLoading ? 'Sending SMS...' : 'Resend SMS Code'}
+                  {resendLoading ? "Sending SMS..." : "Resend SMS Code"}
                 </button>
 
                 <button
@@ -918,10 +1054,13 @@ export default function Auth({ onLogin }: Props) {
           )}
 
           {/* SIGN IN FORM */}
-          {tab === 'signin' && (
+          {tab === "signin" && (
             <form onSubmit={handleSignIn} className="space-y-3.5">
               <div>
-                <label htmlFor="signInIdentifier" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                <label
+                  htmlFor="signInIdentifier"
+                  className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+                >
                   Mobile Phone Number or Email
                 </label>
                 <div className="relative">
@@ -941,7 +1080,10 @@ export default function Auth({ onLogin }: Props) {
               </div>
 
               <div>
-                <label htmlFor="signInPassword" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                <label
+                  htmlFor="signInPassword"
+                  className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -949,7 +1091,7 @@ export default function Auth({ onLogin }: Props) {
                   <input
                     id="signInPassword"
                     name="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     value={signInPassword}
                     onChange={(e) => setSignInPassword(e.target.value)}
                     placeholder="••••••••"
@@ -960,10 +1102,16 @@ export default function Auth({ onLogin }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -973,16 +1121,20 @@ export default function Auth({ onLogin }: Props) {
                 disabled={loading}
                 className="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? "Signing in..." : "Sign In"}
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <div className="text-center pt-2">
                 <span className="text-[11px] text-gray-500">
-                  Don't have an account?{' '}
+                  Don't have an account?{" "}
                   <button
                     type="button"
-                    onClick={() => { setTab('signup'); setError(''); setResendSuccess('') }}
+                    onClick={() => {
+                      setTab("signup")
+                      setError("")
+                      setResendSuccess("")
+                    }}
                     className="font-bold text-red-700 hover:underline"
                   >
                     Sign up with Mobile SMS
@@ -993,51 +1145,96 @@ export default function Auth({ onLogin }: Props) {
           )}
 
           {/* SIGN UP MULTI-STEP FLOW (SMS VERIFICATION) */}
-          {tab === 'signup' && (
+          {tab === "signup" && (
             <div className="space-y-4">
               {/* Step Progress Indicators */}
               <div className="flex items-center justify-between px-2 mb-2">
                 <div className="flex items-center gap-1.5">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    signUpStep === 'info' ? 'bg-red-700 text-white' : 'bg-emerald-500 text-white'
-                  }`}>
-                    {signUpStep === 'info' ? '1' : '✓'}
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      signUpStep === "info"
+                        ? "bg-red-700 text-white"
+                        : "bg-emerald-500 text-white"
+                    }`}
+                  >
+                    {signUpStep === "info" ? "1" : "✓"}
                   </div>
-                  <span className={`text-[11px] font-bold ${signUpStep === 'info' ? 'text-red-800' : 'text-gray-500'}`}>Phone</span>
+                  <span
+                    className={`text-[11px] font-bold ${
+                      signUpStep === "info" ? "text-red-800" : "text-gray-500"
+                    }`}
+                  >
+                    Phone
+                  </span>
                 </div>
                 <div className="h-0.5 flex-1 mx-2 bg-gray-200">
-                  <div className={`h-full bg-red-600 transition-all duration-300 ${
-                    signUpStep === 'info' ? 'w-0' : signUpStep === 'otp' ? 'w-1/2' : 'w-full'
-                  }`} />
+                  <div
+                    className={`h-full bg-red-600 transition-all duration-300 ${
+                      signUpStep === "info"
+                        ? "w-0"
+                        : signUpStep === "otp"
+                          ? "w-1/2"
+                          : "w-full"
+                    }`}
+                  />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    signUpStep === 'otp' ? 'bg-red-700 text-white' : isPhoneConfirmed ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {isPhoneConfirmed ? '✓' : '2'}
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      signUpStep === "otp"
+                        ? "bg-red-700 text-white"
+                        : isPhoneConfirmed
+                          ? "bg-emerald-500 text-white"
+                          : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    {isPhoneConfirmed ? "✓" : "2"}
                   </div>
-                  <span className={`text-[11px] font-bold ${signUpStep === 'otp' ? 'text-red-800' : 'text-gray-500'}`}>Verify SMS</span>
+                  <span
+                    className={`text-[11px] font-bold ${
+                      signUpStep === "otp" ? "text-red-800" : "text-gray-500"
+                    }`}
+                  >
+                    Verify SMS
+                  </span>
                 </div>
                 <div className="h-0.5 flex-1 mx-2 bg-gray-200">
-                  <div className={`h-full bg-red-600 transition-all duration-300 ${
-                    signUpStep === 'details' ? 'w-full' : 'w-0'
-                  }`} />
+                  <div
+                    className={`h-full bg-red-600 transition-all duration-300 ${
+                      signUpStep === "details" ? "w-full" : "w-0"
+                    }`}
+                  />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    signUpStep === 'details' ? 'bg-red-700 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      signUpStep === "details"
+                        ? "bg-red-700 text-white"
+                        : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
                     3
                   </div>
-                  <span className={`text-[11px] font-bold ${signUpStep === 'details' ? 'text-red-800' : 'text-gray-500'}`}>Password</span>
+                  <span
+                    className={`text-[11px] font-bold ${
+                      signUpStep === "details"
+                        ? "text-red-800"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Password
+                  </span>
                 </div>
               </div>
 
               {/* STEP 1: Basic Info & Mobile Phone */}
-              {signUpStep === 'info' && (
+              {signUpStep === "info" && (
                 <form onSubmit={handleSendPhoneOtp} className="space-y-3">
                   <div>
-                    <label htmlFor="signUpName" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                    <label
+                      htmlFor="signUpName"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+                    >
                       Full Name *
                     </label>
                     <div className="relative">
@@ -1057,7 +1254,10 @@ export default function Auth({ onLogin }: Props) {
                   </div>
 
                   <div>
-                    <label htmlFor="signUpPhone" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                    <label
+                      htmlFor="signUpPhone"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+                    >
                       Mobile Phone Number (Will be verified via SMS) *
                     </label>
                     <div className="relative flex items-center">
@@ -1079,13 +1279,20 @@ export default function Auth({ onLogin }: Props) {
                     </div>
                     <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
                       <MessageSquare className="w-3 h-3 text-red-600 flex-shrink-0" />
-                      A 6-digit SMS OTP code will be sent to verify your phone number.
+                      A 6-digit SMS OTP code will be sent to verify your phone
+                      number.
                     </p>
                   </div>
 
                   <div>
-                    <label htmlFor="signUpEmail" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                      Email Address <span className="text-gray-400 font-normal lowercase">(optional)</span>
+                    <label
+                      htmlFor="signUpEmail"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+                    >
+                      Email Address{" "}
+                      <span className="text-gray-400 font-normal lowercase">
+                        (optional)
+                      </span>
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1109,11 +1316,13 @@ export default function Auth({ onLogin }: Props) {
                   >
                     {loading ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin" /> Sending SMS Code...
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Sending
+                        SMS Code...
                       </>
                     ) : (
                       <>
-                        <MessageSquare className="w-4 h-4" /> Send SMS Verification Code <ArrowRight className="w-4 h-4" />
+                        <MessageSquare className="w-4 h-4" /> Send SMS
+                        Verification Code <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
@@ -1121,7 +1330,7 @@ export default function Auth({ onLogin }: Props) {
               )}
 
               {/* STEP 2: Enter 6-digit SMS OTP Code */}
-              {signUpStep === 'otp' && (
+              {signUpStep === "otp" && (
                 <form onSubmit={handleVerifyOtp} className="space-y-3.5">
                   {/* Incoming SMS Notification Simulation Banner */}
                   {incomingSmsPreview && (
@@ -1131,18 +1340,32 @@ export default function Auth({ onLogin }: Props) {
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>SIMULATED SMS NOTIFICATION</span>
                         </div>
-                        <span className="text-[10px] text-gray-400">{incomingSmsPreview.time}</span>
+                        <span className="text-[10px] text-gray-400">
+                          {incomingSmsPreview.time}
+                        </span>
                       </div>
                       <p className="text-xs text-gray-200 font-mono leading-tight">
-                        💬 B-Link: Your 6-digit verification code is <strong className="text-yellow-300 font-bold tracking-widest text-sm bg-black/40 px-1.5 py-0.5 rounded">{incomingSmsPreview.code}</strong>. Valid for 10 min.
+                        💬 B-Link: Your 6-digit verification code is{" "}
+                        <strong className="text-yellow-300 font-bold tracking-widest text-sm bg-black/40 px-1.5 py-0.5 rounded">
+                          {incomingSmsPreview.code}
+                        </strong>
+                        . Valid for 10 min.
                       </p>
                       <button
                         type="button"
-                        onClick={() => handleAutoFillOtp(incomingSmsPreview.code)}
+                        onClick={() =>
+                          handleAutoFillOtp(incomingSmsPreview.code)
+                        }
                         className="w-full py-1.5 bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm"
                       >
-                        {copiedCode ? <CheckCheck className="w-3.5 h-3.5 text-green-700" /> : <Copy className="w-3.5 h-3.5" />}
-                        {copiedCode ? 'Code Applied to Input!' : 'Auto-fill SMS Code'}
+                        {copiedCode ? (
+                          <CheckCheck className="w-3.5 h-3.5 text-green-700" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                        {copiedCode
+                          ? "Code Applied to Input!"
+                          : "Auto-fill SMS Code"}
                       </button>
                     </div>
                   )}
@@ -1151,7 +1374,9 @@ export default function Auth({ onLogin }: Props) {
                     <div className="w-9 h-9 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-1">
                       <Smartphone className="w-5 h-5" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-sm">Enter SMS Verification Code</h3>
+                    <h3 className="font-bold text-gray-900 text-sm">
+                      Enter SMS Verification Code
+                    </h3>
                     <p className="text-xs text-gray-600">
                       We sent a 6-digit SMS text code to your mobile phone:
                     </p>
@@ -1160,7 +1385,10 @@ export default function Auth({ onLogin }: Props) {
                       <span>{formatPhoneNumber(phone)}</span>
                       <button
                         type="button"
-                        onClick={() => { setSignUpStep('info'); setError('') }}
+                        onClick={() => {
+                          setSignUpStep("info")
+                          setError("")
+                        }}
                         className="ml-1 text-gray-400 hover:text-red-700"
                         title="Change Mobile Number"
                         aria-label="Change Phone number"
@@ -1171,7 +1399,10 @@ export default function Auth({ onLogin }: Props) {
                   </div>
 
                   <div>
-                    <label htmlFor="otpCode" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5 text-center">
+                    <label
+                      htmlFor="otpCode"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5 text-center"
+                    >
                       6-Digit SMS Code
                     </label>
                     <input
@@ -1180,7 +1411,11 @@ export default function Auth({ onLogin }: Props) {
                       type="text"
                       maxLength={6}
                       value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onChange={(e) =>
+                        setOtpCode(
+                          e.target.value.replace(/\D/g, "").slice(0, 6),
+                        )
+                      }
                       placeholder="• • • • • •"
                       autoComplete="one-time-code"
                       required
@@ -1194,14 +1429,19 @@ export default function Auth({ onLogin }: Props) {
                     disabled={loading || otpCode.length !== 6}
                     className="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    {loading ? 'Verifying SMS Code...' : 'Verify Phone & Proceed'}
+                    {loading
+                      ? "Verifying SMS Code..."
+                      : "Verify Phone & Proceed"}
                     <CheckCircle2 className="w-4 h-4" />
                   </button>
 
                   <div className="flex items-center justify-between text-xs pt-1">
                     <button
                       type="button"
-                      onClick={() => { setSignUpStep('info'); setError('') }}
+                      onClick={() => {
+                        setSignUpStep("info")
+                        setError("")
+                      }}
                       className="text-gray-500 hover:text-gray-800 flex items-center gap-1 font-medium"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" /> Change Phone
@@ -1213,8 +1453,14 @@ export default function Auth({ onLogin }: Props) {
                       onClick={handleResendOtp}
                       className="text-red-700 font-bold hover:underline disabled:opacity-50 flex items-center gap-1"
                     >
-                      <RefreshCw className={`w-3 h-3 ${resendLoading ? 'animate-spin' : ''}`} />
-                      {otpCountdown > 0 ? `Resend SMS (${otpCountdown}s)` : 'Resend SMS'}
+                      <RefreshCw
+                        className={`w-3 h-3 ${
+                          resendLoading ? "animate-spin" : ""
+                        }`}
+                      />
+                      {otpCountdown > 0
+                        ? `Resend SMS (${otpCountdown}s)`
+                        : "Resend SMS"}
                     </button>
                   </div>
 
@@ -1224,22 +1470,27 @@ export default function Auth({ onLogin }: Props) {
                       onClick={handleBypassPhoneVerification}
                       className="text-[11px] text-gray-500 hover:text-red-700 underline font-medium"
                     >
-                      Didn't receive SMS? (Click to verify &amp; continue directly)
+                      Didn't receive SMS? (Click to verify &amp; continue
+                      directly)
                     </button>
                   </div>
                 </form>
               )}
 
               {/* STEP 3: Complete Account Setup */}
-              {signUpStep === 'details' && (
+              {signUpStep === "details" && (
                 <form onSubmit={handleCompleteSignUp} className="space-y-3">
                   {/* Verified Phone Banner */}
                   <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                       <div>
-                        <span className="font-bold text-emerald-950 block">{formatPhoneNumber(phone)}</span>
-                        <span className="text-[10px] text-emerald-700 font-medium">Mobile Phone Verified via SMS</span>
+                        <span className="font-bold text-emerald-950 block">
+                          {formatPhoneNumber(phone)}
+                        </span>
+                        <span className="text-[10px] text-emerald-700 font-medium">
+                          Mobile Phone Verified via SMS
+                        </span>
                       </div>
                     </div>
                     <span className="px-2 py-0.5 bg-emerald-200/80 text-emerald-900 rounded-full text-[10px] font-extrabold uppercase tracking-wide">
@@ -1249,7 +1500,10 @@ export default function Auth({ onLogin }: Props) {
 
                   {/* Password */}
                   <div>
-                    <label htmlFor="signUpPassword" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                    <label
+                      htmlFor="signUpPassword"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+                    >
                       Create Password *
                     </label>
                     <div className="relative">
@@ -1257,7 +1511,7 @@ export default function Auth({ onLogin }: Props) {
                       <input
                         id="signUpPassword"
                         name="password"
-                        type={showPassword ? 'text' : 'password'}
+                        type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Min 6 characters"
@@ -1268,10 +1522,16 @@ export default function Auth({ onLogin }: Props) {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1279,7 +1539,10 @@ export default function Auth({ onLogin }: Props) {
                   {/* State & District */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label htmlFor="signUpState" className="block text-[10px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                      <label
+                        htmlFor="signUpState"
+                        className="block text-[10px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+                      >
                         State (India)
                       </label>
                       <select
@@ -1290,13 +1553,18 @@ export default function Auth({ onLogin }: Props) {
                         className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-red-400"
                       >
                         {INDIAN_STATES_AND_DISTRICTS.map((s) => (
-                          <option key={s.state} value={s.state}>{s.state}</option>
+                          <option key={s.state} value={s.state}>
+                            {s.state}
+                          </option>
                         ))}
                       </select>
                     </div>
 
                     <div>
-                      <label htmlFor="signUpDistrict" className="block text-[10px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                      <label
+                        htmlFor="signUpDistrict"
+                        className="block text-[10px] font-bold uppercase tracking-wider text-gray-700 mb-1"
+                      >
                         District
                       </label>
                       <select
@@ -1307,7 +1575,9 @@ export default function Auth({ onLogin }: Props) {
                         className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-red-400"
                       >
                         {availableDistricts.map((d) => (
-                          <option key={d} value={d}>{d}</option>
+                          <option key={d} value={d}>
+                            {d}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -1315,7 +1585,10 @@ export default function Auth({ onLogin }: Props) {
 
                   {/* Volunteer Donor Toggle */}
                   <div className="p-3 rounded-2xl bg-red-50/70 border border-red-100 space-y-2">
-                    <label htmlFor="isVolunteerDonor" className="flex items-center gap-2 cursor-pointer">
+                    <label
+                      htmlFor="isVolunteerDonor"
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
                       <input
                         id="isVolunteerDonor"
                         name="isVolunteerDonor"
@@ -1331,20 +1604,31 @@ export default function Auth({ onLogin }: Props) {
 
                     {isVolunteerDonor && (
                       <div className="pt-1 text-xs">
-                        <label htmlFor="signUpBloodGroup" className="text-gray-700 text-[10px] font-semibold block mb-0.5">Blood Type</label>
+                        <label
+                          htmlFor="signUpBloodGroup"
+                          className="text-gray-700 text-[10px] font-semibold block mb-0.5"
+                        >
+                          Blood Type
+                        </label>
                         <select
                           id="signUpBloodGroup"
                           name="bloodGroup"
                           value={bloodGroup}
-                          onChange={(e) => setBloodGroup(e.target.value as BloodGroup)}
+                          onChange={(e) =>
+                            setBloodGroup(e.target.value as BloodGroup)
+                          }
                           className="w-full p-2 bg-white border border-gray-200 rounded-xl font-bold focus:ring-2 focus:ring-red-400"
                         >
-                          {BLOOD_GROUPS.map(g => (
-                            <option key={g} value={g}>{g}</option>
+                          {BLOOD_GROUPS.map((g) => (
+                            <option key={g} value={g}>
+                              {g}
+                            </option>
                           ))}
                         </select>
                         <p className="text-[10px] text-gray-500 mt-1">
-                          You will receive emergency situational SMS &amp; in-app alerts when patients in {district} match your blood type.
+                          You will receive emergency situational SMS &amp;
+                          in-app alerts when patients in {district} match your
+                          blood type.
                         </p>
                       </div>
                     )}
@@ -1355,7 +1639,7 @@ export default function Auth({ onLogin }: Props) {
                     disabled={loading}
                     className="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
                   >
-                    {loading ? 'Creating account...' : 'Complete Registration'}
+                    {loading ? "Creating account..." : "Complete Registration"}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
@@ -1363,10 +1647,14 @@ export default function Auth({ onLogin }: Props) {
 
               <div className="text-center pt-1 border-t border-gray-100">
                 <span className="text-[11px] text-gray-500">
-                  Already have an account?{' '}
+                  Already have an account?{" "}
                   <button
                     type="button"
-                    onClick={() => { setTab('signin'); setError(''); setResendSuccess('') }}
+                    onClick={() => {
+                      setTab("signin")
+                      setError("")
+                      setResendSuccess("")
+                    }}
                     className="font-bold text-red-700 hover:underline"
                   >
                     Sign in
