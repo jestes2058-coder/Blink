@@ -128,3 +128,13 @@ export interface EmailOtpRecord {
   verified: boolean
 }
 
+export interface PhoneOtpRecord {
+  phone: string
+  code: string
+  expiresAt: number
+  verified: boolean
+}
+
+export type SmsOtpRecord = PhoneOtpRecord
+
+

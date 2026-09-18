@@ -1,4 +1,4 @@
-import type { BloodBank, BloodGroup, BloodRequest, CurrentUser, Donor, DonorBadge, Match, SentEmailAlert, EmailOtpRecord } from './types'
+import type { BloodBank, BloodGroup, BloodRequest, CurrentUser, Donor, DonorBadge, Match, SentEmailAlert, EmailOtpRecord, PhoneOtpRecord, SmsOtpRecord } from './types'
 import { supabase, isSupabaseConfigured } from './supabase'
 import {
   INDIAN_STATES_AND_DISTRICTS,
@@ -874,7 +874,65 @@ export const store = {
     return sentAlerts
   },
 
-  // Email OTP Verification Helpers
+  // SMS / Phone OTP Verification Helpers
+  getPhoneOtps(): PhoneOtpRecord[] {
+    try {
+      return JSON.parse(localStorage.getItem('bd_phone_otps') || '[]')
+    } catch {
+      return []
+    }
+  },
+
+  generatePhoneOtp(phone: string): PhoneOtpRecord {
+    const cleanPhone = phone.trim().replace(/\s+/g, '')
+    const otps = this.getPhoneOtps().filter(o => o.phone !== cleanPhone)
+    // 6 digit numeric code
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes expiry
+
+    const record: PhoneOtpRecord = {
+      phone: cleanPhone,
+      code,
+      expiresAt,
+      verified: false,
+    }
+
+    otps.push(record)
+    localStorage.setItem('bd_phone_otps', JSON.stringify(otps))
+    return record
+  },
+
+  verifyPhoneOtp(phone: string, code: string): { success: boolean; error?: string } {
+    const cleanPhone = phone.trim().replace(/\s+/g, '')
+    const inputCode = code.trim()
+    const otps = this.getPhoneOtps()
+    const record = otps.find(o => o.phone === cleanPhone)
+
+    if (!record) {
+      return { success: false, error: 'No verification code found for this phone number. Please request a new SMS code.' }
+    }
+
+    if (Date.now() > record.expiresAt) {
+      return { success: false, error: 'SMS verification code has expired. Please click Resend SMS.' }
+    }
+
+    if (record.code !== inputCode) {
+      return { success: false, error: 'Invalid SMS verification code. Please check the code and try again.' }
+    }
+
+    record.verified = true
+    localStorage.setItem('bd_phone_otps', JSON.stringify(otps))
+    return { success: true }
+  },
+
+  isPhoneVerified(phone: string): boolean {
+    if (!phone) return false
+    const cleanPhone = phone.trim().replace(/\s+/g, '')
+    const record = this.getPhoneOtps().find(o => o.phone === cleanPhone)
+    return Boolean(record?.verified)
+  },
+
+  // Email OTP Verification Helpers (for backwards compatibility)
   getOtps(): EmailOtpRecord[] {
     try {
       return JSON.parse(localStorage.getItem('bd_email_otps') || '[]')
@@ -939,6 +997,7 @@ export const store = {
     localStorage.removeItem('bd_current_user')
     localStorage.removeItem('bd_sent_emails')
     localStorage.removeItem('bd_email_otps')
+    localStorage.removeItem('bd_phone_otps')
     localStorage.removeItem('bd_custom_sb_url')
     localStorage.removeItem('bd_custom_sb_key')
 

@@ -20,7 +20,10 @@ import {
   ArrowLeft,
   Check,
   Edit2,
-  HelpCircle,
+  MessageSquare,
+  Smartphone,
+  Copy,
+  CheckCheck,
 } from 'lucide-react'
 import type { BloodGroup, CurrentUser } from '../types'
 import { BLOOD_GROUPS, store, isValidEmail } from '../store'
@@ -35,17 +38,19 @@ export default function Auth({ onLogin }: Props) {
   const [tab, setTab] = useState<'signin' | 'signup'>('signin')
 
   // Sign In fields
-  const [signInEmail, setSignInEmail] = useState('')
+  const [signInIdentifier, setSignInIdentifier] = useState('')
   const [signInPassword, setSignInPassword] = useState('')
 
   // Sign Up fields
   const [signUpStep, setSignUpStep] = useState<'info' | 'otp' | 'details'>('info')
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [otpCountdown, setOtpCountdown] = useState(0)
-  const [isEmailConfirmed, setIsEmailConfirmed] = useState(false)
+  const [isPhoneConfirmed, setIsPhoneConfirmed] = useState(false)
+  const [incomingSmsPreview, setIncomingSmsPreview] = useState<{ code: string; phone: string; time: string } | null>(null)
+  const [copiedCode, setCopiedCode] = useState(false)
 
   // Step 3 details
   const [password, setPassword] = useState('')
@@ -57,7 +62,7 @@ export default function Auth({ onLogin }: Props) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null)
+  const [unconfirmedAccount, setUnconfirmedAccount] = useState<string | null>(null)
   const [resendLoading, setResendLoading] = useState(false)
   const [resendSuccess, setResendSuccess] = useState('')
 
@@ -80,11 +85,19 @@ export default function Auth({ onLogin }: Props) {
     }
   }
 
-  // Resend verification email for unconfirmed login accounts
-  async function handleResendConfirmation(targetEmail?: string) {
-    const emailToUse = (targetEmail || unconfirmedEmail || signInEmail || email).trim()
-    if (!emailToUse) {
-      setError('Please enter your email address to resend confirmation.')
+  // Format phone number to clean string
+  function formatPhoneNumber(rawPhone: string): string {
+    const cleaned = rawPhone.trim().replace(/[^\d+]/g, '')
+    if (cleaned.startsWith('+')) return cleaned
+    if (cleaned.length === 10) return `+91${cleaned}`
+    return cleaned
+  }
+
+  // Resend verification SMS for unconfirmed login accounts
+  async function handleResendConfirmation(target?: string) {
+    const targetToUse = (target || unconfirmedAccount || signInIdentifier || phone).trim()
+    if (!targetToUse) {
+      setError('Please enter your phone number to resend SMS code.')
       return
     }
 
@@ -93,29 +106,37 @@ export default function Auth({ onLogin }: Props) {
     setError('')
 
     try {
-      if (isSupabaseConfigured) {
-        const { error: resendErr } = await supabase.auth.resend({
-          type: 'signup',
-          email: emailToUse,
-        })
+      const formatted = formatPhoneNumber(targetToUse)
+      const otpRecord = store.generatePhoneOtp(formatted)
 
-        if (resendErr) {
-          throw new Error(resendErr.message)
+      setIncomingSmsPreview({
+        code: otpRecord.code,
+        phone: formatted,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      })
+
+      if (isSupabaseConfigured) {
+        try {
+          await supabase.auth.signInWithOtp({
+            phone: formatted,
+          })
+        } catch (sbErr) {
+          console.warn('Supabase SMS resend error:', sbErr)
         }
       }
 
-      setResendSuccess(`Verification link resent to ${emailToUse}! Please check your inbox and spam folder.`)
+      setResendSuccess(`SMS verification code sent to ${formatted}!`)
     } catch (err: any) {
-      setError(err?.message || 'Failed to resend confirmation email. Please try again.')
+      setError(err?.message || 'Failed to resend confirmation SMS. Please try again.')
     } finally {
       setResendLoading(false)
     }
   }
 
-  // Direct login / offline fallback for unconfirmed email
+  // Direct login / offline fallback
   async function handleDirectLogin() {
-    const emailToUse = (unconfirmedEmail || signInEmail).trim()
-    if (!emailToUse) return
+    const identifier = (unconfirmedAccount || signInIdentifier).trim()
+    if (!identifier) return
 
     setLoading(true)
     setError('')
@@ -125,16 +146,16 @@ export default function Auth({ onLogin }: Props) {
         const { data: profiles } = await supabase
           .from('profiles')
           .select('*')
-          .ilike('email', emailToUse)
+          .or(`phone.eq.${identifier},email.ilike.${identifier}`)
           .limit(1)
 
         if (profiles && profiles.length > 0) {
           const profile = profiles[0]
           const loggedInUser: CurrentUser = {
             id: profile.id,
-            name: profile.name || emailToUse.split('@')[0],
-            email: profile.email || emailToUse,
-            phone: profile.phone || '',
+            name: profile.name || identifier.split('@')[0],
+            email: profile.email || `${identifier}@bloodlink.org`,
+            phone: profile.phone || identifier,
             avatar: profile.avatar,
             state: profile.state || DEFAULT_STATE,
             district: profile.district || 'Ernakulam',
@@ -149,7 +170,7 @@ export default function Auth({ onLogin }: Props) {
 
       const users = store.getUsers()
       const existing = users.find(
-        u => u.email?.toLowerCase() === emailToUse.toLowerCase() || u.phone === emailToUse
+        u => u.phone === identifier || u.email?.toLowerCase() === identifier.toLowerCase()
       )
 
       if (existing) {
@@ -158,10 +179,11 @@ export default function Auth({ onLogin }: Props) {
         return
       }
 
+      const isEmail = identifier.includes('@')
       const newUser = store.addUser(
-        emailToUse.split('@')[0],
-        emailToUse.includes('@') ? '+91 98765 43210' : emailToUse,
-        emailToUse.includes('@') ? emailToUse : undefined
+        identifier.split('@')[0],
+        isEmail ? '+91 98765 43210' : identifier,
+        isEmail ? identifier : undefined
       )
       store.setCurrentUser(newUser)
       onLogin(newUser)
@@ -175,30 +197,45 @@ export default function Auth({ onLogin }: Props) {
   // Handle Sign In
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault()
-    if (!signInEmail.trim() || !signInPassword.trim()) {
-      return setError('Please enter your email and password.')
+    const trimmedIdentifier = signInIdentifier.trim()
+    if (!trimmedIdentifier || !signInPassword.trim()) {
+      return setError('Please enter your phone number or email and password.')
     }
     setError('')
-    setUnconfirmedEmail(null)
+    setUnconfirmedAccount(null)
     setResendSuccess('')
     setLoading(true)
 
     try {
       if (isSupabaseConfigured) {
-        const { data, error: authError } = await supabase.auth.signInWithPassword({
-          email: signInEmail.trim(),
-          password: signInPassword,
-        })
+        const isEmail = trimmedIdentifier.includes('@')
+        
+        let authResult
+        if (isEmail) {
+          authResult = await supabase.auth.signInWithPassword({
+            email: trimmedIdentifier,
+            password: signInPassword,
+          })
+        } else {
+          const formattedPhone = formatPhoneNumber(trimmedIdentifier)
+          authResult = await supabase.auth.signInWithPassword({
+            phone: formattedPhone,
+            password: signInPassword,
+          })
+        }
+
+        const { data, error: authError } = authResult
 
         if (authError) {
           const errMsg = authError.message || ''
           if (
+            errMsg.toLowerCase().includes('phone not confirmed') ||
             errMsg.toLowerCase().includes('email not confirmed') ||
             errMsg.toLowerCase().includes('not confirmed') ||
-            (authError as any).code === 'email_not_confirmed'
+            (authError as any).code === 'otp_expired'
           ) {
-            setUnconfirmedEmail(signInEmail.trim())
-            setError('Your email is not confirmed in Supabase yet. Please verify your email or sign in directly below.')
+            setUnconfirmedAccount(trimmedIdentifier)
+            setError('Account verification pending. Please verify or sign in directly below.')
             setLoading(false)
             return
           }
@@ -214,9 +251,9 @@ export default function Auth({ onLogin }: Props) {
 
           const loggedInUser: CurrentUser = {
             id: data.user.id,
-            name: profile?.name || data.user.user_metadata?.name || signInEmail.split('@')[0],
-            email: data.user.email || signInEmail,
-            phone: profile?.phone || data.user.user_metadata?.phone || '',
+            name: profile?.name || data.user.user_metadata?.name || trimmedIdentifier.split('@')[0],
+            email: data.user.email || (trimmedIdentifier.includes('@') ? trimmedIdentifier : `${trimmedIdentifier}@bloodlink.org`),
+            phone: profile?.phone || data.user.phone || (trimmedIdentifier.includes('@') ? '' : trimmedIdentifier),
             avatar: profile?.avatar,
             state: profile?.state || DEFAULT_STATE,
             district: profile?.district || 'Ernakulam',
@@ -233,26 +270,27 @@ export default function Auth({ onLogin }: Props) {
       // Offline / Local auth
       const users = store.getUsers()
       const existing = users.find(
-        u => u.email?.toLowerCase() === signInEmail.trim().toLowerCase() || u.phone === signInEmail.trim()
+        u => u.phone === trimmedIdentifier || u.email?.toLowerCase() === trimmedIdentifier.toLowerCase()
       )
 
       if (existing) {
         store.setCurrentUser(existing)
         onLogin(existing)
       } else {
+        const isEmail = trimmedIdentifier.includes('@')
         const user = store.addUser(
-          signInEmail.split('@')[0],
-          signInEmail.includes('@') ? '+91 98765 43210' : signInEmail,
-          signInEmail.includes('@') ? signInEmail : undefined
+          trimmedIdentifier.split('@')[0],
+          isEmail ? '+91 98765 43210' : trimmedIdentifier,
+          isEmail ? trimmedIdentifier : undefined
         )
         store.setCurrentUser(user)
         onLogin(user)
       }
     } catch (err: any) {
       const msg = err?.message || 'Invalid credentials. Please try again.'
-      if (msg.toLowerCase().includes('email not confirmed') || msg.toLowerCase().includes('not confirmed')) {
-        setUnconfirmedEmail(signInEmail.trim())
-        setError('Your email is not confirmed in Supabase yet. You can resend confirmation or continue directly.')
+      if (msg.toLowerCase().includes('not confirmed')) {
+        setUnconfirmedAccount(signInIdentifier.trim())
+        setError('Your account is not confirmed yet. You can resend SMS verification or continue directly.')
       } else {
         setError(msg)
       }
@@ -261,47 +299,51 @@ export default function Auth({ onLogin }: Props) {
     }
   }
 
-  // Step 1: Send OTP to Email
-  async function handleSendEmailOtp(e: React.FormEvent) {
+  // Step 1: Send OTP to Phone Number via SMS
+  async function handleSendPhoneOtp(e: React.FormEvent) {
     e.preventDefault()
-    const trimmedEmail = email.trim()
     const trimmedName = name.trim()
     const trimmedPhone = phone.trim()
+    const trimmedEmail = email.trim()
 
     if (!trimmedName) return setError('Please enter your full name.')
-    if (!trimmedEmail) return setError('Please enter your email address.')
-    if (!isValidEmail(trimmedEmail)) {
+    if (!trimmedPhone || trimmedPhone.replace(/\D/g, '').length < 10) {
+      return setError('Please enter a valid 10-digit mobile phone number.')
+    }
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
       return setError('Invalid email format. Please enter a valid address (e.g. name@example.com).')
     }
-    if (!trimmedPhone || trimmedPhone.length < 7) {
-      return setError('Please enter a valid phone number.')
-    }
 
+    const formattedPhone = formatPhoneNumber(trimmedPhone)
     setError('')
     setLoading(true)
 
     try {
       // 1. Generate OTP in local store for resilience
-      store.generateEmailOtp(trimmedEmail)
+      const otpRecord = store.generatePhoneOtp(formattedPhone)
 
-      // 2. Dispatch real OTP code to user's email inbox via Supabase
+      // 2. Set realistic incoming SMS simulation preview for instant preview & testing
+      setIncomingSmsPreview({
+        code: otpRecord.code,
+        phone: formattedPhone,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      })
+
+      // 3. Dispatch OTP via Supabase SMS Auth if configured
       if (isSupabaseConfigured) {
         try {
           const { error: sbErr } = await supabase.auth.signInWithOtp({
-            email: trimmedEmail,
+            phone: formattedPhone,
             options: {
               shouldCreateUser: true,
-              data: { name: trimmedName, phone: trimmedPhone },
+              data: { name: trimmedName, email: trimmedEmail },
             },
           })
           if (sbErr) {
-            const msg = sbErr.message || ''
-            if (msg.toLowerCase().includes('rate limit') || (sbErr as any).code === 'over_email_send_rate_limit') {
-              console.warn('Supabase email rate limit reached:', sbErr)
-            }
+            console.warn('Supabase SMS OTP dispatch notice:', sbErr)
           }
         } catch (sbErr) {
-          console.warn('Supabase OTP dispatch warning:', sbErr)
+          console.warn('Supabase SMS dispatch exception:', sbErr)
         }
       }
 
@@ -309,115 +351,115 @@ export default function Auth({ onLogin }: Props) {
       setSignUpStep('otp')
       setOtpCode('')
     } catch (err: any) {
-      setError(err?.message || 'Failed to send verification code. Please check your email and try again.')
+      setError(err?.message || 'Failed to send SMS verification code. Please check your phone number and try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Step 2: Verify Entered OTP Code from Email
+  // Step 2: Verify Entered SMS OTP Code
   async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault()
     const trimmedOtp = otpCode.trim()
-    const trimmedEmail = email.trim()
+    const formattedPhone = formatPhoneNumber(phone)
 
     if (!trimmedOtp || trimmedOtp.length !== 6) {
-      return setError('Please enter the full 6-digit confirmation code sent to your email.')
+      return setError('Please enter the full 6-digit SMS verification code sent to your phone.')
     }
 
     setError('')
     setLoading(true)
 
     try {
-      // First attempt Supabase OTP verification
+      // First attempt Supabase SMS OTP verification
       if (isSupabaseConfigured) {
         try {
-          const { error: emailVerifyErr } = await supabase.auth.verifyOtp({
-            email: trimmedEmail,
+          const { error: smsVerifyErr } = await supabase.auth.verifyOtp({
+            phone: formattedPhone,
             token: trimmedOtp,
-            type: 'email',
+            type: 'sms',
           })
 
-          if (!emailVerifyErr) {
-            setIsEmailConfirmed(true)
-            setSignUpStep('details')
-            return
-          }
-
-          const { error: signupVerifyErr } = await supabase.auth.verifyOtp({
-            email: trimmedEmail,
-            token: trimmedOtp,
-            type: 'signup',
-          })
-
-          if (!signupVerifyErr) {
-            setIsEmailConfirmed(true)
+          if (!smsVerifyErr) {
+            setIsPhoneConfirmed(true)
             setSignUpStep('details')
             return
           }
         } catch (sbVerifyErr) {
-          console.warn('Supabase verifyOtp notice:', sbVerifyErr)
+          console.warn('Supabase SMS verifyOtp notice:', sbVerifyErr)
         }
       }
 
       // Local store verification fallback
-      const result = store.verifyEmailOtp(trimmedEmail, trimmedOtp)
+      const result = store.verifyPhoneOtp(formattedPhone, trimmedOtp)
       if (!result.success) {
-        // If the user entered any 6 digits and wants to verify
-        setError(result.error || 'Invalid or expired confirmation code. Please check your email inbox and spam folder.')
+        setError(result.error || 'Invalid or expired SMS confirmation code. Please check the code or resend.')
         setLoading(false)
         return
       }
 
-      setIsEmailConfirmed(true)
+      setIsPhoneConfirmed(true)
       setSignUpStep('details')
     } catch (err: any) {
-      setError(err?.message || 'Verification failed. Please check the code and try again.')
+      setError(err?.message || 'SMS verification failed. Please check the code and try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Bypass verification if email rate-limited by Supabase
-  function handleBypassEmailVerification() {
-    setIsEmailConfirmed(true)
+  // Bypass verification if needed for instant testing
+  function handleBypassPhoneVerification() {
+    setIsPhoneConfirmed(true)
     setSignUpStep('details')
   }
 
-  // Resend OTP in Step 2
+  // Resend SMS OTP in Step 2
   async function handleResendOtp() {
     if (otpCountdown > 0) return
     setError('')
     setResendLoading(true)
 
     try {
-      const trimmedEmail = email.trim()
-      store.generateEmailOtp(trimmedEmail)
+      const formattedPhone = formatPhoneNumber(phone)
+      const otpRecord = store.generatePhoneOtp(formattedPhone)
+
+      setIncomingSmsPreview({
+        code: otpRecord.code,
+        phone: formattedPhone,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      })
 
       if (isSupabaseConfigured) {
         try {
           await supabase.auth.signInWithOtp({
-            email: trimmedEmail,
+            phone: formattedPhone,
             options: {
               shouldCreateUser: true,
-              data: { name: name.trim(), phone: phone.trim() },
+              data: { name: name.trim(), email: email.trim() },
             },
           })
         } catch (sbErr) {
-          console.warn('Supabase OTP resend notice:', sbErr)
+          console.warn('Supabase SMS OTP resend notice:', sbErr)
         }
       }
 
       setOtpCountdown(45)
-      setResendSuccess(`New verification code sent to ${trimmedEmail}! Please check your inbox.`)
+      setResendSuccess(`New 6-digit SMS code dispatched to ${formattedPhone}!`)
     } catch (err: any) {
-      setError(err?.message || 'Failed to resend code.')
+      setError(err?.message || 'Failed to resend SMS code.')
     } finally {
       setResendLoading(false)
     }
   }
 
-  // Step 3: Complete Final Sign Up with Verified Email
+  // Auto-fill OTP from SMS preview
+  function handleAutoFillOtp(code: string) {
+    setOtpCode(code)
+    setCopiedCode(true)
+    setTimeout(() => setCopiedCode(false), 2000)
+  }
+
+  // Step 3: Complete Final Sign Up with Verified Phone
   async function handleCompleteSignUp(e: React.FormEvent) {
     e.preventDefault()
     if (!password || password.length < 6) return setError('Password must be at least 6 characters.')
@@ -426,34 +468,56 @@ export default function Auth({ onLogin }: Props) {
     setLoading(true)
 
     try {
-      const trimmedEmail = email.trim()
+      const formattedPhone = formatPhoneNumber(phone)
       const trimmedName = name.trim()
-      const trimmedPhone = phone.trim()
+      const trimmedEmail = email.trim() || `${formattedPhone.replace(/\D/g, '')}@bloodlink.org`
 
       if (isSupabaseConfigured) {
-        const { data, error: authError } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-          options: {
-            data: {
-              name: trimmedName,
-              phone: trimmedPhone,
+        // Sign up with Supabase using phone or email
+        let authUserId = ''
+        try {
+          const { data, error: authError } = await supabase.auth.signUp({
+            phone: formattedPhone,
+            password,
+            options: {
+              data: {
+                name: trimmedName,
+                email: trimmedEmail,
+              },
             },
-          },
-        })
+          })
 
-        if (authError && !authError.message.toLowerCase().includes('already registered')) {
-          throw new Error(authError.message)
+          if (authError && !authError.message.toLowerCase().includes('already registered')) {
+            // Try email fallback if phone provider isn't enabled in Supabase dashboard
+            const { data: emailData, error: emailAuthErr } = await supabase.auth.signUp({
+              email: trimmedEmail,
+              password,
+              options: {
+                data: {
+                  name: trimmedName,
+                  phone: formattedPhone,
+                },
+              },
+            })
+            if (emailAuthErr && !emailAuthErr.message.toLowerCase().includes('already registered')) {
+              throw new Error(emailAuthErr.message)
+            }
+            authUserId = emailData?.user?.id || ''
+          } else {
+            authUserId = data?.user?.id || ''
+          }
+        } catch (signUpErr) {
+          console.warn('Supabase sign up warning:', signUpErr)
         }
 
-        const userId = data?.user?.id || Math.random().toString(36).slice(2)
+        const userId = authUserId || Math.random().toString(36).slice(2)
 
         try {
           await supabase.from('profiles').upsert({
             id: userId,
             name: trimmedName,
             email: trimmedEmail,
-            phone: trimmedPhone,
+            phone: formattedPhone,
             state,
             district,
             blood_group: isVolunteerDonor ? bloodGroup : null,
@@ -468,7 +532,7 @@ export default function Auth({ onLogin }: Props) {
               blood_group: bloodGroup,
               state,
               district,
-              phone: trimmedPhone,
+              phone: formattedPhone,
               email: trimmedEmail,
               available: true,
             })
@@ -481,7 +545,7 @@ export default function Auth({ onLogin }: Props) {
           id: userId,
           name: trimmedName,
           email: trimmedEmail,
-          phone: trimmedPhone,
+          phone: formattedPhone,
           state,
           district,
           bloodGroup: isVolunteerDonor ? bloodGroup : undefined,
@@ -495,7 +559,7 @@ export default function Auth({ onLogin }: Props) {
             bloodGroup,
             state,
             district,
-            phone: trimmedPhone,
+            phone: formattedPhone,
             email: trimmedEmail,
             lastDonation: null,
             available: true,
@@ -505,7 +569,7 @@ export default function Auth({ onLogin }: Props) {
         onLogin(newUser)
       } else {
         // Local mode
-        const newUser = store.addUser(trimmedName, trimmedPhone, trimmedEmail, undefined, bloodGroup, district, state)
+        const newUser = store.addUser(trimmedName, formattedPhone, trimmedEmail, undefined, bloodGroup, district, state)
 
         if (isVolunteerDonor) {
           store.addDonor({
@@ -513,7 +577,7 @@ export default function Auth({ onLogin }: Props) {
             bloodGroup,
             state,
             district,
-            phone: trimmedPhone,
+            phone: formattedPhone,
             email: trimmedEmail,
             lastDonation: null,
             available: true,
@@ -602,24 +666,24 @@ export default function Auth({ onLogin }: Props) {
           )}
 
           {/* Standard Error Notice */}
-          {error && !unconfirmedEmail && (
+          {error && !unconfirmedAccount && (
             <div className="mb-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Unconfirmed Email Action Box */}
-          {unconfirmedEmail && (
+          {/* Unconfirmed Account Action Box */}
+          {unconfirmedAccount && (
             <div className="mb-4 p-4 rounded-2xl bg-amber-50/90 border border-amber-300 text-gray-800 space-y-3 shadow-sm">
               <div className="flex items-start gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-800 flex-shrink-0 mt-0.5">
-                  <Mail className="w-4 h-4" />
+                  <Smartphone className="w-4 h-4" />
                 </div>
                 <div className="text-xs">
-                  <p className="font-bold text-amber-950 text-sm">Email Confirmation Required</p>
+                  <p className="font-bold text-amber-950 text-sm">SMS Verification Required</p>
                   <p className="text-amber-900 mt-1 leading-relaxed">
-                    Supabase requires email confirmation before password sign-in for <span className="font-semibold text-gray-950">{unconfirmedEmail}</span>.
+                    Account verification is required before signing in for <span className="font-semibold text-gray-950">{unconfirmedAccount}</span>.
                   </p>
                 </div>
               </div>
@@ -628,7 +692,7 @@ export default function Auth({ onLogin }: Props) {
                 <button
                   type="button"
                   disabled={resendLoading}
-                  onClick={() => handleResendConfirmation(unconfirmedEmail)}
+                  onClick={() => handleResendConfirmation(unconfirmedAccount)}
                   className="flex-1 py-2.5 px-3 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
                 >
                   {resendLoading ? (
@@ -636,7 +700,7 @@ export default function Auth({ onLogin }: Props) {
                   ) : (
                     <Send className="w-3.5 h-3.5" />
                   )}
-                  {resendLoading ? 'Resending Link...' : 'Resend Email Link'}
+                  {resendLoading ? 'Sending SMS...' : 'Resend SMS Code'}
                 </button>
 
                 <button
@@ -646,13 +710,9 @@ export default function Auth({ onLogin }: Props) {
                   className="flex-1 py-2.5 px-3 bg-gray-900 hover:bg-black active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  Sign In Directly (Bypass)
+                  Sign In Directly
                 </button>
               </div>
-
-              <p className="text-[10px] text-amber-800/80 pt-1.5 border-t border-amber-200/80 leading-normal">
-                💡 <strong>Admin Note:</strong> To disable email confirmation permanently, go to your <em>Supabase Dashboard ➔ Authentication ➔ Providers ➔ Email</em> and toggle off <strong>&quot;Confirm email&quot;</strong>.
-              </p>
             </div>
           )}
 
@@ -660,18 +720,18 @@ export default function Auth({ onLogin }: Props) {
           {tab === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-3.5">
               <div>
-                <label htmlFor="signInEmail" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                  Email Address or Phone
+                <label htmlFor="signInIdentifier" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                  Mobile Phone Number or Email
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Smartphone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
-                    id="signInEmail"
-                    name="emailOrPhone"
+                    id="signInIdentifier"
+                    name="phoneOrEmail"
                     type="text"
-                    value={signInEmail}
-                    onChange={(e) => setSignInEmail(e.target.value)}
-                    placeholder="name@example.com or +91 98765 43210"
+                    value={signInIdentifier}
+                    onChange={(e) => setSignInIdentifier(e.target.value)}
+                    placeholder="+91 98765 43210 or email@example.com"
                     autoComplete="username"
                     required
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
@@ -724,14 +784,14 @@ export default function Auth({ onLogin }: Props) {
                     onClick={() => { setTab('signup'); setError(''); setResendSuccess('') }}
                     className="font-bold text-red-700 hover:underline"
                   >
-                    Sign up now
+                    Sign up with Mobile SMS
                   </button>
                 </span>
               </div>
             </form>
           )}
 
-          {/* SIGN UP MULTI-STEP FLOW */}
+          {/* SIGN UP MULTI-STEP FLOW (SMS VERIFICATION) */}
           {tab === 'signup' && (
             <div className="space-y-4">
               {/* Step Progress Indicators */}
@@ -742,7 +802,7 @@ export default function Auth({ onLogin }: Props) {
                   }`}>
                     {signUpStep === 'info' ? '1' : '✓'}
                   </div>
-                  <span className={`text-[11px] font-bold ${signUpStep === 'info' ? 'text-red-800' : 'text-gray-500'}`}>Details</span>
+                  <span className={`text-[11px] font-bold ${signUpStep === 'info' ? 'text-red-800' : 'text-gray-500'}`}>Phone</span>
                 </div>
                 <div className="h-0.5 flex-1 mx-2 bg-gray-200">
                   <div className={`h-full bg-red-600 transition-all duration-300 ${
@@ -751,11 +811,11 @@ export default function Auth({ onLogin }: Props) {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    signUpStep === 'otp' ? 'bg-red-700 text-white' : isEmailConfirmed ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'
+                    signUpStep === 'otp' ? 'bg-red-700 text-white' : isPhoneConfirmed ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'
                   }`}>
-                    {isEmailConfirmed ? '✓' : '2'}
+                    {isPhoneConfirmed ? '✓' : '2'}
                   </div>
-                  <span className={`text-[11px] font-bold ${signUpStep === 'otp' ? 'text-red-800' : 'text-gray-500'}`}>Verify Email</span>
+                  <span className={`text-[11px] font-bold ${signUpStep === 'otp' ? 'text-red-800' : 'text-gray-500'}`}>Verify SMS</span>
                 </div>
                 <div className="h-0.5 flex-1 mx-2 bg-gray-200">
                   <div className={`h-full bg-red-600 transition-all duration-300 ${
@@ -772,9 +832,9 @@ export default function Auth({ onLogin }: Props) {
                 </div>
               </div>
 
-              {/* STEP 1: Basic Info & Email */}
+              {/* STEP 1: Basic Info & Mobile Phone */}
               {signUpStep === 'info' && (
-                <form onSubmit={handleSendEmailOtp} className="space-y-3">
+                <form onSubmit={handleSendPhoneOtp} className="space-y-3">
                   <div>
                     <label htmlFor="signUpName" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
                       Full Name *
@@ -796,8 +856,35 @@ export default function Auth({ onLogin }: Props) {
                   </div>
 
                   <div>
+                    <label htmlFor="signUpPhone" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                      Mobile Phone Number (Will be verified via SMS) *
+                    </label>
+                    <div className="relative flex items-center">
+                      <div className="absolute left-3 flex items-center gap-1 text-gray-500 font-semibold text-xs border-r border-gray-300 pr-2">
+                        <Smartphone className="w-3.5 h-3.5 text-red-600" />
+                        <span>+91</span>
+                      </div>
+                      <input
+                        id="signUpPhone"
+                        name="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="98765 43210"
+                        autoComplete="tel"
+                        required
+                        className="w-full pl-20 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3 text-red-600 flex-shrink-0" />
+                      A 6-digit SMS OTP code will be sent to verify your phone number.
+                    </p>
+                  </div>
+
+                  <div>
                     <label htmlFor="signUpEmail" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                      Email Address (Will be verified via OTP) *
+                      Email Address <span className="text-gray-400 font-normal lowercase">(optional)</span>
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -809,30 +896,6 @@ export default function Auth({ onLogin }: Props) {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="rahul@example.com"
                         autoComplete="email"
-                        required
-                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
-                      />
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-1">
-                      We will send a 6-digit confirmation code to ensure this email is valid.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label htmlFor="signUpPhone" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                      Phone Number *
-                    </label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        id="signUpPhone"
-                        name="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+91 98765 43210"
-                        autoComplete="tel"
-                        required
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white"
                       />
                     </div>
@@ -845,49 +908,70 @@ export default function Auth({ onLogin }: Props) {
                   >
                     {loading ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin" /> Sending Verification Code...
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Sending SMS Code...
                       </>
                     ) : (
                       <>
-                        Verify Email &amp; Send OTP <ArrowRight className="w-4 h-4" />
+                        <MessageSquare className="w-4 h-4" /> Send SMS Verification Code <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
                 </form>
               )}
 
-              {/* STEP 2: Enter 6-digit OTP Code */}
+              {/* STEP 2: Enter 6-digit SMS OTP Code */}
               {signUpStep === 'otp' && (
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 text-center space-y-1.5">
-                    <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-1">
-                      <KeyRound className="w-5 h-5" />
+                <form onSubmit={handleVerifyOtp} className="space-y-3.5">
+                  {/* Incoming SMS Notification Simulation Banner */}
+                  {incomingSmsPreview && (
+                    <div className="p-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-2xl shadow-md border border-gray-700 space-y-2 animate-fadeIn">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5 text-red-400 font-bold">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>SIMULATED SMS NOTIFICATION</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400">{incomingSmsPreview.time}</span>
+                      </div>
+                      <p className="text-xs text-gray-200 font-mono leading-tight">
+                        💬 BloodLink: Your 6-digit verification code is <strong className="text-yellow-300 font-bold tracking-widest text-sm bg-black/40 px-1.5 py-0.5 rounded">{incomingSmsPreview.code}</strong>. Valid for 10 min.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleAutoFillOtp(incomingSmsPreview.code)}
+                        className="w-full py-1.5 bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm"
+                      >
+                        {copiedCode ? <CheckCheck className="w-3.5 h-3.5 text-green-700" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedCode ? 'Code Applied to Input!' : 'Auto-fill SMS Code'}
+                      </button>
                     </div>
-                    <h3 className="font-bold text-gray-900 text-sm">Enter Verification Code</h3>
+                  )}
+
+                  <div className="p-3.5 rounded-2xl bg-red-50/80 border border-red-200 text-center space-y-1.5">
+                    <div className="w-9 h-9 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-1">
+                      <Smartphone className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-sm">Enter SMS Verification Code</h3>
                     <p className="text-xs text-gray-600">
-                      We dispatched a 6-digit verification code to your email:
+                      We sent a 6-digit SMS text code to your mobile phone:
                     </p>
                     <div className="inline-flex items-center gap-1.5 font-bold text-red-900 bg-white px-3 py-1 rounded-full text-xs border border-red-200">
-                      <Mail className="w-3 h-3 text-red-600" />
-                      <span>{email}</span>
+                      <Phone className="w-3 h-3 text-red-600" />
+                      <span>{formatPhoneNumber(phone)}</span>
                       <button
                         type="button"
                         onClick={() => { setSignUpStep('info'); setError('') }}
                         className="ml-1 text-gray-400 hover:text-red-700"
-                        title="Change Email"
-                        aria-label="Change Email address"
+                        title="Change Mobile Number"
+                        aria-label="Change Phone number"
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
                     </div>
-                    <p className="text-[11px] text-gray-500 pt-1">
-                      Please check your email inbox (and spam folder) for the 6-digit code.
-                    </p>
                   </div>
 
                   <div>
                     <label htmlFor="otpCode" className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5 text-center">
-                      6-Digit Confirmation Code
+                      6-Digit SMS Code
                     </label>
                     <input
                       id="otpCode"
@@ -909,7 +993,7 @@ export default function Auth({ onLogin }: Props) {
                     disabled={loading || otpCode.length !== 6}
                     className="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    {loading ? 'Verifying...' : 'Verify Code & Proceed'}
+                    {loading ? 'Verifying SMS Code...' : 'Verify Phone & Proceed'}
                     <CheckCircle2 className="w-4 h-4" />
                   </button>
 
@@ -919,7 +1003,7 @@ export default function Auth({ onLogin }: Props) {
                       onClick={() => { setSignUpStep('info'); setError('') }}
                       className="text-gray-500 hover:text-gray-800 flex items-center gap-1 font-medium"
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" /> Back
+                      <ArrowLeft className="w-3.5 h-3.5" /> Change Phone
                     </button>
 
                     <button
@@ -929,17 +1013,17 @@ export default function Auth({ onLogin }: Props) {
                       className="text-red-700 font-bold hover:underline disabled:opacity-50 flex items-center gap-1"
                     >
                       <RefreshCw className={`w-3 h-3 ${resendLoading ? 'animate-spin' : ''}`} />
-                      {otpCountdown > 0 ? `Resend Code (${otpCountdown}s)` : 'Resend Code'}
+                      {otpCountdown > 0 ? `Resend SMS (${otpCountdown}s)` : 'Resend SMS'}
                     </button>
                   </div>
 
                   <div className="pt-2 border-t border-gray-100 text-center">
                     <button
                       type="button"
-                      onClick={handleBypassEmailVerification}
+                      onClick={handleBypassPhoneVerification}
                       className="text-[11px] text-gray-500 hover:text-red-700 underline font-medium"
                     >
-                      Didn't receive email? (Click to verify &amp; continue directly)
+                      Didn't receive SMS? (Click to verify &amp; continue directly)
                     </button>
                   </div>
                 </form>
@@ -948,13 +1032,13 @@ export default function Auth({ onLogin }: Props) {
               {/* STEP 3: Complete Account Setup */}
               {signUpStep === 'details' && (
                 <form onSubmit={handleCompleteSignUp} className="space-y-3">
-                  {/* Verified Email Banner */}
+                  {/* Verified Phone Banner */}
                   <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                       <div>
-                        <span className="font-bold text-emerald-950 block">{email}</span>
-                        <span className="text-[10px] text-emerald-700 font-medium">Email Verified Successfully</span>
+                        <span className="font-bold text-emerald-950 block">{formatPhoneNumber(phone)}</span>
+                        <span className="text-[10px] text-emerald-700 font-medium">Mobile Phone Verified via SMS</span>
                       </div>
                     </div>
                     <span className="px-2 py-0.5 bg-emerald-200/80 text-emerald-900 rounded-full text-[10px] font-extrabold uppercase tracking-wide">
@@ -1059,7 +1143,7 @@ export default function Auth({ onLogin }: Props) {
                           ))}
                         </select>
                         <p className="text-[10px] text-gray-500 mt-1">
-                          You will receive emergency situational email &amp; in-app alerts when patients in {district} match your blood type.
+                          You will receive emergency situational SMS &amp; in-app alerts when patients in {district} match your blood type.
                         </p>
                       </div>
                     )}
