@@ -89,8 +89,8 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
     setStep('preview')
   }
 
-  function handleSubmit() {
-    const newReq = store.addRequest({
+  async function handleSubmit() {
+    const newReq = await store.addRequest({
       requestorId: user.id,
       requestorName: user.name,
       requestorPhone: user.phone,
@@ -105,7 +105,7 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
       notes: notes.trim(),
     })
 
-    const count = newReq.matches.length
+    const count = newReq.matches ? newReq.matches.length : 0
     if (count > 0) {
       onToast('success', 'Request Broadcasted', `Notified ${count} eligible donor${count > 1 ? 's' : ''} in ${district}, ${state}.`)
     } else {

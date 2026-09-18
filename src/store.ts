@@ -21,6 +21,12 @@ export const BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-',
 
 export const DISTRICTS = KERALA_DISTRICTS
 
+export const DEMO_USERS: (CurrentUser & { roleDesc?: string })[] = [
+  { id: 'demo-1', name: 'Dr. Arjun Nair', phone: '+91 98470 12345', email: 'arjun@bloodlink.org', bloodGroup: 'O+', district: 'Ernakulam', state: 'Kerala', isDonor: true, roleDesc: 'O+ Voluntary Donor · Ernakulam' },
+  { id: 'demo-2', name: 'Priya Varma', phone: '+91 94460 54321', email: 'priya@bloodlink.org', bloodGroup: 'A+', district: 'Thiruvananthapuram', state: 'Kerala', isDonor: true, roleDesc: 'A+ Life Saver · Trivandrum' },
+  { id: 'demo-3', name: 'Mohammed Basil', phone: '+91 97450 99887', email: 'basil@bloodlink.org', bloodGroup: 'B+', district: 'Kozhikode', state: 'Kerala', isDonor: true, roleDesc: 'B+ Hospital Requester · Calicut' },
+]
+
 // Who can donate to a given recipient blood group
 export const COMPATIBLE_DONORS: Record<BloodGroup, BloodGroup[]> = {
   'A+':  ['A+', 'A-', 'O+', 'O-'],
