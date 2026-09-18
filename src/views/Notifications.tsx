@@ -54,7 +54,19 @@ export default function Notifications({ user, setView, onToast }: Props) {
   const refresh = () => forceUpdate(n => n + 1)
 
   const donors = store.getDonors()
-  const myProfile = donors.find(d => d.phone === user.phone || d.id === user.id || (user.email && d.email === user.email)) || {
+  const userDigits = (user.phone || '').replace(/\D/g, '')
+  const userLast10 = userDigits.length >= 7 ? userDigits.slice(-10) : ''
+
+  const myProfile = donors.find(d => {
+    if (d.id === user.id) return true
+    if (d.phone === user.phone) return true
+    if (userLast10 && d.phone) {
+      const dDigits = d.phone.replace(/\D/g, '')
+      if (dDigits.slice(-10) === userLast10) return true
+    }
+    if (user.email && d.email && d.email.toLowerCase() === user.email.toLowerCase()) return true
+    return false
+  }) || {
     id: user.id,
     name: user.name,
     phone: user.phone || '',
@@ -75,11 +87,12 @@ export default function Notifications({ user, setView, onToast }: Props) {
 
   // Collect all requests that match this donor:
   const myMatches = requests.filter(r => {
-    if (r.requestorId === myProfile.id || (myProfile.phone && r.requestorPhone === myProfile.phone)) {
+    const rDigits = (r.requestorPhone || '').replace(/\D/g, '')
+    if (r.requestorId === myProfile.id || (userLast10 && rDigits.slice(-10) === userLast10) || (myProfile.phone && r.requestorPhone === myProfile.phone)) {
       return false
     }
 
-    const hasExplicitMatch = r.matches.some(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
+    const hasExplicitMatch = r.matches.some(m => m.donorId === myProfile.id || (myProfile.name && !myProfile.name.match(/^\d+$/) && m.donorName === myProfile.name))
     if (hasExplicitMatch) return true
 
     if (r.status === 'open') {

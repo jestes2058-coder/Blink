@@ -45,7 +45,19 @@ export default function MyRequests({ user, setView, onToast }: Props) {
   const refresh = () => forceUpdate(n => n + 1)
 
   const requests = store.getRequests()
-  const myRequests = requests.filter(r => r.requestorId === user.id || r.requestorPhone === user.phone).reverse()
+  const userDigits = (user.phone || '').replace(/\D/g, '')
+  const userLast10 = userDigits.length >= 7 ? userDigits.slice(-10) : ''
+
+  const myRequests = requests.filter(r => {
+    if (r.requestorId === user.id) return true
+    if (r.requestorPhone === user.phone) return true
+    if (userLast10 && r.requestorPhone) {
+      const rDigits = r.requestorPhone.replace(/\D/g, '')
+      if (rDigits.slice(-10) === userLast10) return true
+    }
+    if (user.name && !user.name.match(/^\d+$/) && r.requestorName && r.requestorName.toLowerCase() === user.name.toLowerCase()) return true
+    return false
+  }).reverse()
 
   const filtered = myRequests.filter((r) => {
     if (filterStatus === 'all') return true

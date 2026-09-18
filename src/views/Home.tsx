@@ -56,7 +56,19 @@ export default function Home({
 
   const donors = store.getDonors()
   const requests = store.getRequests()
-  const myDonorProfile = donors.find(d => d.id === user.id || d.phone === user.phone) || {
+  const userPhoneClean = (user.phone || '').replace(/\D/g, '')
+  const userLast10 = userPhoneClean.length >= 7 ? userPhoneClean.slice(-10) : ''
+
+  const myDonorProfile = donors.find(d => {
+    if (d.id === user.id) return true
+    if (d.phone === user.phone) return true
+    if (userLast10 && d.phone) {
+      const dDigits = d.phone.replace(/\D/g, '')
+      if (dDigits.slice(-10) === userLast10) return true
+    }
+    if (user.email && d.email && d.email.toLowerCase() === user.email.toLowerCase()) return true
+    return false
+  }) || {
     id: user.id,
     name: user.name,
     phone: user.phone || '',

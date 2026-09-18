@@ -441,40 +441,66 @@ export function playEmergencyAlarm() {
 
 // Store with Real-Time Matching & Supabase Cloud Sync
 export const store = {
-  // Sync all data from Supabase silently in backend
+  // Sync all data from Supabase silently in backend and merge with local data
   async syncFromSupabase() {
     if (!isSupabaseConfigured) return
 
     try {
-      // Sync Real Donors from Supabase
+      // Sync Real Donors from Supabase and merge
       const { data: donorsData, error: donorsErr } = await supabase.from('donors').select('*')
       if (!donorsErr && donorsData) {
-        const mappedDonors: Donor[] = donorsData.map(d => ({
-          id: d.id,
-          name: d.name,
-          bloodGroup: d.blood_group as BloodGroup,
-          state: d.state || DEFAULT_STATE,
-          district: d.district,
-          phone: d.phone,
-          email: d.email || '',
-          avatar: d.avatar,
-          lastDonation: d.last_donation,
-          registeredAt: d.registered_at || new Date().toISOString(),
-          totalDonations: d.total_donations || 0,
-          available: d.available ?? true,
-        }))
-        this.setDonors(mappedDonors)
+        const localDonors = this.getDonors()
+        const donorMap = new Map<string, Donor>()
+
+        // Populate with local donors first
+        localDonors.forEach(d => {
+          const cleanPhone = (d.phone || '').replace(/\D/g, '')
+          const key = d.id || (cleanPhone.length >= 7 ? cleanPhone.slice(-10) : '') || d.email || d.name
+          if (key) donorMap.set(key, d)
+        })
+
+        // Merge Supabase donors
+        donorsData.forEach(d => {
+          const cleanPhone = (d.phone || '').replace(/\D/g, '')
+          const key = d.id || (cleanPhone.length >= 7 ? cleanPhone.slice(-10) : '') || d.email || d.name
+          const existing = key ? donorMap.get(key) : undefined
+
+          const mapped: Donor = {
+            id: d.id || existing?.id || uid(),
+            name: d.name || existing?.name || 'Donor',
+            bloodGroup: (d.blood_group || existing?.bloodGroup || 'O+') as BloodGroup,
+            state: d.state || existing?.state || DEFAULT_STATE,
+            district: d.district || existing?.district || DEFAULT_DISTRICT,
+            phone: d.phone || existing?.phone || '',
+            email: d.email || existing?.email || '',
+            avatar: d.avatar || existing?.avatar,
+            lastDonation: d.last_donation || existing?.lastDonation,
+            registeredAt: d.registered_at || existing?.registeredAt || new Date().toISOString(),
+            totalDonations: d.total_donations ?? existing?.totalDonations ?? 0,
+            available: d.available ?? existing?.available ?? true,
+          }
+          if (key) donorMap.set(key, mapped)
+        })
+
+        this.setDonors(Array.from(donorMap.values()))
       }
 
-      // Sync Real Requests from Supabase
+      // Sync Real Requests from Supabase and merge
       const { data: reqData, error: reqErr } = await supabase.from('blood_requests').select('*')
       if (!reqErr && reqData) {
-        const mappedReq: BloodRequest[] = reqData.map(r => {
+        const localRequests = this.getRequests()
+        const reqMap = new Map<string, BloodRequest>()
+
+        // Populate with local requests first
+        localRequests.forEach(r => reqMap.set(r.id, r))
+
+        // Merge Supabase requests
+        reqData.forEach(r => {
           const scheduleMatch = (r.notes || '').match(/\[Schedule:\s*([^\]]+)\]/)
           const rawNotes = (r.notes || '').replace(/\[Schedule:\s*[^\]]+\]\s*/g, '').trim()
           const computedReqBy = r.required_by || (scheduleMatch ? scheduleMatch[1] : undefined)
 
-          return {
+          const mapped: BloodRequest = {
             id: r.id,
             requestorId: r.requestor_id,
             requestorName: r.requestor_name,
@@ -495,8 +521,10 @@ export const store = {
             status: r.status,
             matches: r.matches || [],
           }
+          reqMap.set(r.id, mapped)
         })
-        this.setRequests(mappedReq)
+
+        this.setRequests(Array.from(reqMap.values()))
       }
     } catch (err) {
       console.warn('Supabase sync notice:', err)
@@ -812,28 +840,51 @@ export const store = {
       return false
     })
 
+    // Check if donor profile exists to enrich user data
+    const donors = this.getDonors()
+    const existingDonor = donors.find(d => {
+      if (last10 && d.phone && d.phone.replace(/\D/g, '').slice(-10) === last10) return true
+      if (email && d.email && d.email.toLowerCase() === email.toLowerCase()) return true
+      return false
+    })
+
     if (existing) {
-      existing.name = name || existing.name
+      // Only update name if it's not a numeric phone string
+      if (name && !name.match(/^\d+$/) && name !== cleanPhone && name !== phone) {
+        existing.name = name
+      } else if ((!existing.name || existing.name.match(/^\d+$/)) && existingDonor?.name && !existingDonor.name.match(/^\d+$/)) {
+        existing.name = existingDonor.name
+      }
       if (phone) existing.phone = phone
       if (email) existing.email = email
       if (avatar) existing.avatar = avatar
+      else if (!existing.avatar && existingDonor?.avatar) existing.avatar = existingDonor.avatar
+
       if (bloodGroup) existing.bloodGroup = bloodGroup
+      else if (!existing.bloodGroup && existingDonor?.bloodGroup) existing.bloodGroup = existingDonor.bloodGroup
+
       if (district) existing.district = district
+      else if (!existing.district && existingDonor?.district) existing.district = existingDonor.district
+
       if (state) existing.state = state
+      else if (!existing.state && existingDonor?.state) existing.state = existingDonor.state
+
       localStorage.setItem('bd_users', JSON.stringify(users))
       this.setCurrentUser(existing)
       return existing
     }
+
+    const initialName = (name && !name.match(/^\d+$/)) ? name : (existingDonor?.name && !existingDonor.name.match(/^\d+$/) ? existingDonor.name : name)
     const user: CurrentUser = {
-      id: uid(),
-      name,
+      id: existingDonor?.id || uid(),
+      name: initialName,
       phone,
       email,
-      avatar,
-      bloodGroup: bloodGroup || 'O+',
-      district: district || DEFAULT_DISTRICT,
-      state: state || DEFAULT_STATE,
-      isDonor: true,
+      avatar: avatar || existingDonor?.avatar,
+      bloodGroup: bloodGroup || existingDonor?.bloodGroup || 'O+',
+      district: district || existingDonor?.district || DEFAULT_DISTRICT,
+      state: state || existingDonor?.state || DEFAULT_STATE,
+      isDonor: existingDonor ? true : true,
     }
     users.push(user)
     localStorage.setItem('bd_users', JSON.stringify(users))
