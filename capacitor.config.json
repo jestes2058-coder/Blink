@@ -1,6 +1,6 @@
 {
   "appId": "com.blink.app",
-  "appName": "Blink",
+  "appName": "B-Link",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

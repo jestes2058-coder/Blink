@@ -18,12 +18,12 @@ export default function DonorCardModal({ donor, onClose }: Props) {
   function handleShare() {
     if (navigator.share) {
       navigator.share({
-        title: `${donor.name} - Blink Donor`,
-        text: `I'm a registered ${donor.bloodGroup} blood donor on Blink (${donor.district}, ${donor.state || 'India'})! ${donor.totalDonations} donations completed, saving ${livesSaved} lives.`,
+        title: `${donor.name} - B-Link Donor`,
+        text: `I'm a registered ${donor.bloodGroup} blood donor on B-Link (${donor.district}, ${donor.state || 'India'})! ${donor.totalDonations} donations completed, saving ${livesSaved} lives.`,
         url: window.location.href,
       }).catch(() => {})
     } else {
-      navigator.clipboard.writeText(`I'm a registered ${donor.bloodGroup} blood donor on Blink! ${donor.totalDonations} donations completed.`)
+      navigator.clipboard.writeText(`I'm a registered ${donor.bloodGroup} blood donor on B-Link! ${donor.totalDonations} donations completed.`)
       alert('Donor profile summary copied to clipboard!')
     }
   }

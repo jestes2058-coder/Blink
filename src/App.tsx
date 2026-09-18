@@ -285,12 +285,12 @@ export default function App() {
       deferredPrompt.prompt()
       deferredPrompt.userChoice.then((choiceResult: any) => {
         if (choiceResult.outcome === 'accepted') {
-          addToast('success', 'App Installed', 'Blink has been added to your home screen!')
+          addToast('success', 'App Installed', 'B-Link has been added to your home screen!')
         }
         setDeferredPrompt(null)
       })
     } else {
-      alert('To install Blink on your device:\n\n• On iOS (Safari): Tap Share ➔ Add to Home Screen.\n• On Android (Chrome): Tap Menu (⋮) ➔ Install App.')
+      alert('To install B-Link on your device:\n\n• On iOS (Safari): Tap Share ➔ Add to Home Screen.\n• On Android (Chrome): Tap Menu (⋮) ➔ Install App.')
     }
   }
 
