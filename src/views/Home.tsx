@@ -26,6 +26,7 @@ import {
   nextEligibleDate,
   DONATION_INTERVAL_DAYS,
   getDonorBadge,
+  COMPATIBLE_DONORS,
 } from '../store'
 import BloodBadge from '../components/BloodBadge'
 import UrgencyBadge from '../components/UrgencyBadge'
@@ -53,11 +54,48 @@ export default function Home({
 
   const donors = store.getDonors()
   const requests = store.getRequests()
-  const myDonorProfile = donors.find(d => d.id === user.id || d.phone === user.phone)
+  const myDonorProfile = donors.find(d => d.id === user.id || d.phone === user.phone) || {
+    id: user.id,
+    name: user.name,
+    phone: user.phone || '',
+    email: user.email || '',
+    bloodGroup: user.bloodGroup || 'O+',
+    district: user.district || 'Ernakulam',
+    state: user.state || 'Kerala',
+    avatar: user.avatar,
+    registeredAt: new Date().toISOString(),
+    totalDonations: 0,
+    available: true,
+    lastDonation: null,
+  }
 
-  const pendingForMe = requests.filter(r =>
-    r.matches.some(m => m.donorId === (myDonorProfile?.id ?? '') && m.status === 'pending'),
-  )
+  const userBlood = user.bloodGroup || myDonorProfile.bloodGroup || 'O+'
+  const userDistrict = (user.district || myDonorProfile.district || '').trim().toLowerCase()
+  const userState = (user.state || myDonorProfile.state || '').trim().toLowerCase()
+
+  const pendingForMe = requests.filter(r => {
+    if (r.status !== 'open') return false
+    if (r.requestorId === user.id || (user.phone && r.requestorPhone === user.phone)) return false
+
+    const compatible = COMPATIBLE_DONORS[r.bloodGroup] || []
+    if (!compatible.includes(userBlood)) return false
+
+    const reqDistrict = (r.district || '').trim().toLowerCase()
+    const reqState = (r.state || '').trim().toLowerCase()
+    const isCritical = r.urgency === 'critical'
+
+    if (reqDistrict && userDistrict && (reqDistrict === userDistrict || reqDistrict.includes(userDistrict) || userDistrict.includes(reqDistrict))) {
+      const match = r.matches.find(m => m.donorId === user.id || (myDonorProfile && m.donorId === myDonorProfile.id))
+      return !match || match.status === 'pending'
+    }
+
+    if (isCritical && (reqState === userState || !reqDistrict || !userDistrict)) {
+      const match = r.matches.find(m => m.donorId === user.id || (myDonorProfile && m.donorId === myDonorProfile.id))
+      return !match || match.status === 'pending'
+    }
+
+    return false
+  })
 
   const totalDonors = donors.length
   const totalOpenRequests = requests.filter(r => r.status === 'open').length

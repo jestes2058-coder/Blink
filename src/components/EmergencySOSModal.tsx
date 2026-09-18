@@ -29,29 +29,38 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
     }
   }
 
-  function handleTriggerSOS(e: React.FormEvent) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  async function handleTriggerSOS(e: React.FormEvent) {
     e.preventDefault()
     if (!patientName.trim()) return setError('Please specify the patient name.')
     if (!hospital.trim()) return setError('Hospital name is required for urgent dispatch.')
     setError('')
+    setIsSubmitting(true)
 
-    store.addRequest({
-      requestorId: user.id,
-      requestorName: user.name,
-      requestorPhone: user.phone,
-      requestorAvatar: user.avatar,
-      patientName: patientName.trim(),
-      bloodGroup,
-      state,
-      district,
-      urgency: 'critical',
-      hospital: hospital.trim(),
-      unitsNeeded: 2,
-      notes: '🚨 URGENT SOS EMERGENCY: Critical transfusion needed immediately.',
-    })
+    try {
+      await store.addRequest({
+        requestorId: user.id,
+        requestorName: user.name,
+        requestorPhone: user.phone,
+        requestorAvatar: user.avatar,
+        patientName: patientName.trim(),
+        bloodGroup,
+        state: state.trim(),
+        district: district.trim(),
+        urgency: 'critical',
+        hospital: hospital.trim(),
+        unitsNeeded: 2,
+        notes: '🚨 URGENT SOS EMERGENCY: Critical transfusion needed immediately.',
+      })
 
-    onSuccess()
-    onClose()
+      onSuccess()
+      onClose()
+    } catch (err: any) {
+      setError(err?.message || 'Failed to dispatch SOS alert. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

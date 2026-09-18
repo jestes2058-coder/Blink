@@ -52,43 +52,19 @@ export default function Notifications({ user, setView, onToast }: Props) {
   const refresh = () => forceUpdate(n => n + 1)
 
   const donors = store.getDonors()
-  const myProfile = donors.find(d => d.phone === user.phone || d.id === user.id || (user.email && d.email === user.email))
-
-  // If not a registered donor yet
-  if (!myProfile) {
-    return (
-      <div className="w-full max-w-2xl mx-auto px-4 py-12 space-y-6 text-center">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-50 text-red-700 rounded-3xl flex items-center justify-center mx-auto border border-red-100 shadow-sm">
-          <Bell className="w-8 h-8 sm:w-10 sm:h-10" />
-        </div>
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
-            Enable Emergency Donor Alerts
-          </h2>
-          <p className="text-gray-500 text-xs sm:text-sm mt-2 max-w-md mx-auto">
-            Join the volunteer donor registry to receive instant alerts whenever patients matching your blood group in {user.district || 'your district'} need emergency aid.
-          </p>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-white border border-red-100 shadow-sm text-left max-w-md mx-auto space-y-2 text-xs">
-          <p className="font-bold text-gray-900 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" /> How Notifications &amp; Email Alerts Work:
-          </p>
-          <div className="space-y-1.5 text-gray-600 text-[11px] sm:text-xs">
-            <p>1. Patients in your district file an urgent blood request.</p>
-            <p>2. Our matching engine verifies your 90-day cooldown and compatibility.</p>
-            <p>3. You receive an emergency situation email and siren alert with complete privacy protection.</p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setView('register-donor')}
-          className="w-full sm:w-auto px-6 py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md transition"
-        >
-          Register as Volunteer Donor
-        </button>
-      </div>
-    )
+  const myProfile = donors.find(d => d.phone === user.phone || d.id === user.id || (user.email && d.email === user.email)) || {
+    id: user.id,
+    name: user.name,
+    phone: user.phone || '',
+    email: user.email || '',
+    bloodGroup: user.bloodGroup || 'O+',
+    district: user.district || 'Ernakulam',
+    state: user.state || 'Kerala',
+    avatar: user.avatar,
+    registeredAt: new Date().toISOString(),
+    totalDonations: 0,
+    available: true,
+    lastDonation: null,
   }
 
   const eligible = canDonate(myProfile)
@@ -97,12 +73,30 @@ export default function Notifications({ user, setView, onToast }: Props) {
 
   // Collect all requests that match this donor:
   const myMatches = requests.filter(r => {
+    if (r.requestorId === myProfile.id || (myProfile.phone && r.requestorPhone === myProfile.phone)) {
+      return false
+    }
+
     const hasExplicitMatch = r.matches.some(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
     if (hasExplicitMatch) return true
 
-    if (r.status === 'open' && r.district.toLowerCase() === myProfile.district.toLowerCase()) {
+    if (r.status === 'open') {
       const compatible = COMPATIBLE_DONORS[r.bloodGroup] || []
-      return compatible.includes(myProfile.bloodGroup) && r.requestorPhone !== myProfile.phone
+      const isBloodCompatible = compatible.includes(myProfile.bloodGroup)
+      if (!isBloodCompatible) return false
+
+      const reqDistrict = (r.district || '').trim().toLowerCase()
+      const myDistrict = (myProfile.district || '').trim().toLowerCase()
+      const reqState = (r.state || '').trim().toLowerCase()
+      const myState = (myProfile.state || '').trim().toLowerCase()
+
+      if (reqDistrict && myDistrict && (reqDistrict === myDistrict || reqDistrict.includes(myDistrict) || myDistrict.includes(reqDistrict))) {
+        return true
+      }
+
+      if (r.urgency === 'critical' && (reqState === myState || !reqDistrict || !myDistrict)) {
+        return true
+      }
     }
 
     return false
@@ -126,22 +120,22 @@ export default function Notifications({ user, setView, onToast }: Props) {
       }
     }
 
-    let existingMatch = req.matches.find(m => m.donorId === myProfile!.id || m.donorName === myProfile!.name)
+    let existingMatch = req.matches.find(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
     let updatedMatches = [...req.matches]
 
     if (existingMatch) {
       updatedMatches = updatedMatches.map(m =>
-        m.donorId === myProfile!.id || m.donorName === myProfile!.name
+        m.donorId === myProfile.id || m.donorName === myProfile.name
           ? { ...m, status: accept ? 'accepted' : 'declined', respondedAt: new Date().toISOString() }
           : m
       )
     } else {
       updatedMatches.push({
-        donorId: myProfile!.id,
-        donorName: myProfile!.name,
-        donorBloodGroup: myProfile!.bloodGroup,
-        donorDistrict: myProfile!.district,
-        donorAvatar: myProfile!.avatar,
+        donorId: myProfile.id,
+        donorName: myProfile.name,
+        donorBloodGroup: myProfile.bloodGroup,
+        donorDistrict: myProfile.district,
+        donorAvatar: myProfile.avatar,
         status: accept ? 'accepted' : 'declined',
         notifiedAt: new Date().toISOString(),
         respondedAt: new Date().toISOString(),
@@ -156,9 +150,9 @@ export default function Notifications({ user, setView, onToast }: Props) {
 
     if (accept) {
       store.updateDonor({
-        ...myProfile!,
+        ...myProfile,
         lastDonation: new Date().toISOString(),
-        totalDonations: (myProfile!.totalDonations || 0) + 1,
+        totalDonations: (myProfile.totalDonations || 0) + 1,
       })
       onToast('success', 'Blood Request Accepted!', `You accepted the request for ${req.patientName}. Requestor phone number is now revealed below.`)
     } else {

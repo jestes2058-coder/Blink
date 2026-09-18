@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
 import {
   Home as HomeIcon,
   Bell,
@@ -9,9 +9,14 @@ import {
   GitCompare,
   Building2,
   CheckCircle,
+  Flame,
+  AlertTriangle,
+  Volume2,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react'
-import type { CurrentUser, ToastMessage, View } from './types'
-import { store, seedIfEmpty, COMPATIBLE_DONORS } from './store'
+import type { CurrentUser, ToastMessage, View, BloodRequest, BloodGroup } from './types'
+import { store, seedIfEmpty, COMPATIBLE_DONORS, playEmergencyAlarm, playNotificationSound } from './store'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { DEFAULT_STATE, DEFAULT_DISTRICT } from './data/indianLocations'
 import Navbar from './components/Navbar'
@@ -54,22 +59,135 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [, forceUpdate] = useState(0)
 
+  const addToast = useCallback((type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) => {
+    const id = Math.random().toString(36).slice(2, 9)
+    const newToast: ToastMessage = { id, type, title, message, timestamp: Date.now() }
+    setToasts(prev => [...prev, newToast])
+
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, 5500)
+  }, [])
+
+  const handleIncomingSOS = useCallback((req: BloodRequest) => {
+    const currentUser = store.getCurrentUser()
+    if (!currentUser) return
+    if (req.requestorId === currentUser.id || (currentUser.phone && req.requestorPhone === currentUser.phone)) {
+      return
+    }
+
+    const myBlood = currentUser.bloodGroup || 'O+'
+    const compatible = COMPATIBLE_DONORS[req.bloodGroup as BloodGroup] || []
+    const isCompatible = compatible.includes(myBlood as BloodGroup)
+
+    if (isCompatible || req.urgency === 'critical') {
+      try {
+        playEmergencyAlarm()
+      } catch (audioErr) {
+        console.warn('Audio play notice:', audioErr)
+      }
+
+      addToast(
+        'error',
+        req.urgency === 'critical' ? '🚨 CRITICAL SOS EMERGENCY ALERT!' : '🩸 Urgent Blood Request',
+        `Urgent ${req.bloodGroup} needed for ${req.patientName} at ${req.hospital} (${req.district || 'Nearby'})!`
+      )
+    }
+
+    forceUpdate(n => n + 1)
+  }, [addToast])
+
   useEffect(() => {
     seedIfEmpty()
-    
-    // Defer network sync slightly so initial paint and FCP/LCP render instantaneously
-    const scheduleSync = typeof window !== 'undefined' && 'requestIdleCallback' in window
-      ? (cb: () => void) => (window as any).requestIdleCallback(cb, { timeout: 1500 })
-      : (cb: () => void) => setTimeout(cb, 100)
 
-    const syncHandle = scheduleSync(() => {
-      store.syncFromSupabase().then(() => {
-        forceUpdate(n => n + 1)
-      })
+    // 1. Initial background sync
+    store.syncFromSupabase().then(() => {
+      forceUpdate(n => n + 1)
     })
 
-    let authSubscription: { unsubscribe: () => void } | null = null
+    // 2. Real-Time Supabase Channel & Event Subscriptions
+    let sbChannel: any = null
+    if (isSupabaseConfigured) {
+      try {
+        sbChannel = supabase
+          .channel('bloodlink-realtime-global')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'blood_requests' },
+            async (payload) => {
+              await store.syncFromSupabase()
+              if (payload.eventType === 'INSERT') {
+                const row = payload.new as any
+                const mappedReq: BloodRequest = {
+                  id: row.id,
+                  requestorId: row.requestor_id,
+                  requestorName: row.requestor_name,
+                  requestorPhone: row.requestor_phone,
+                  requestorAvatar: row.requestor_avatar,
+                  patientName: row.patient_name,
+                  bloodGroup: row.blood_group as BloodGroup,
+                  state: row.state || DEFAULT_STATE,
+                  district: row.district,
+                  urgency: row.urgency,
+                  hospital: row.hospital,
+                  unitsNeeded: row.units_needed,
+                  notes: row.notes || '',
+                  createdAt: row.created_at || new Date().toISOString(),
+                  status: row.status,
+                  matches: row.matches || [],
+                }
+                handleIncomingSOS(mappedReq)
+              } else {
+                forceUpdate(n => n + 1)
+              }
+            }
+          )
+          .on('broadcast', { event: 'sos_alert' }, ({ payload }) => {
+            if (payload) {
+              handleIncomingSOS(payload as BloodRequest)
+            }
+          })
+          .subscribe()
+      } catch (err) {
+        console.warn('Supabase realtime subscription notice:', err)
+      }
+    }
 
+    // 3. Multi-Tab & Cross-Window Storage Event Listener
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'bd_requests' || e.key === 'bd_donors') {
+        forceUpdate(n => n + 1)
+      }
+      if (e.key === 'bd_last_sos' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue)
+          if (parsed && parsed.req) {
+            handleIncomingSOS(parsed.req)
+          }
+        } catch {}
+      }
+    }
+
+    // 4. Custom window broadcast listener
+    const handleCustomBroadcast = (e: any) => {
+      if (e.detail) {
+        handleIncomingSOS(e.detail)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('bloodlink_sos_broadcast', handleCustomBroadcast)
+
+    // 5. Periodic 5-Second Cloud Sync Polling Fallback
+    const pollInterval = setInterval(async () => {
+      if (isSupabaseConfigured) {
+        await store.syncFromSupabase()
+        forceUpdate(n => n + 1)
+      }
+    }, 5000)
+
+    // 6. Supabase Auth State Listener
+    let authSubscription: { unsubscribe: () => void } | null = null
     if (isSupabaseConfigured) {
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
@@ -108,13 +226,20 @@ export default function App() {
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('bloodlink_sos_broadcast', handleCustomBroadcast)
+      clearInterval(pollInterval)
+      if (sbChannel) {
+        supabase.removeChannel(sbChannel)
+      }
       if (authSubscription) {
         authSubscription.unsubscribe()
       }
     }
-  }, [])
+  }, [handleIncomingSOS])
 
   function handleInstallApp() {
     if (deferredPrompt) {
@@ -128,16 +253,6 @@ export default function App() {
     } else {
       alert('To install BloodLink on your device:\n\n• On iOS (Safari): Tap Share ➔ Add to Home Screen.\n• On Android (Chrome): Tap Menu (⋮) ➔ Install App.')
     }
-  }
-
-  function addToast(type: 'success' | 'info' | 'warning' | 'error', title: string, message: string) {
-    const id = Math.random().toString(36).slice(2, 9)
-    const newToast: ToastMessage = { id, type, title, message, timestamp: Date.now() }
-    setToasts(prev => [...prev, newToast])
-
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id))
-    }, 4500)
   }
 
   function dismissToast(id: string) {
@@ -187,18 +302,43 @@ export default function App() {
   const requests = store.getRequests()
   const myProfile = donors.find(d => d.phone === user.phone || d.id === user.id || (user.email && d.email === user.email))
   
-  // Real-time pending notification count for active donor
-  const pendingCount = myProfile
-    ? requests.filter(r => {
-        const match = r.matches.find(m => m.donorId === myProfile.id || m.donorName === myProfile.name)
-        if (match) return match.status === 'pending'
-        if (r.status === 'open' && r.district.toLowerCase() === myProfile.district.toLowerCase()) {
-          const compatible = COMPATIBLE_DONORS[r.bloodGroup] || []
-          return compatible.includes(myProfile.bloodGroup) && r.requestorPhone !== myProfile.phone
-        }
-        return false
-      }).length
-    : 0
+  const userBloodGroup = (user.bloodGroup || myProfile?.bloodGroup || 'O+') as BloodGroup
+  const userDistrict = (user.district || myProfile?.district || '').trim().toLowerCase()
+  const userState = (user.state || myProfile?.state || '').trim().toLowerCase()
+
+  // Real-time matching calculation for active user
+  const matchingRequests = requests.filter(r => {
+    if (r.status !== 'open') return false
+    if (r.requestorId === user.id || (user.phone && r.requestorPhone === user.phone)) return false
+
+    const compatible = COMPATIBLE_DONORS[r.bloodGroup] || []
+    if (!compatible.includes(userBloodGroup)) return false
+
+    const reqDistrict = (r.district || '').trim().toLowerCase()
+    const reqState = (r.state || '').trim().toLowerCase()
+    const isCritical = r.urgency === 'critical'
+
+    // 1. Same district match
+    if (reqDistrict && userDistrict && (reqDistrict === userDistrict || reqDistrict.includes(userDistrict) || userDistrict.includes(reqDistrict))) {
+      return true
+    }
+
+    // 2. Critical SOS emergency in state
+    if (isCritical && (reqState === userState || !reqDistrict || !userDistrict)) {
+      return true
+    }
+
+    return false
+  })
+
+  // Pending count for alerts badge
+  const pendingCount = matchingRequests.filter(r => {
+    const match = r.matches.find(m => m.donorId === user.id || (myProfile && m.donorId === myProfile.id))
+    return !match || match.status === 'pending'
+  }).length
+
+  // Find most urgent active Critical SOS for top banner alert
+  const activeCriticalSOS = matchingRequests.find(r => r.urgency === 'critical')
 
   // Mobile Bottom Navigation Items
   const mobileNavItems: { view: View; label: string; icon: any; badge?: number }[] = [
@@ -221,6 +361,46 @@ export default function App() {
         onOpenEditProfile={() => setShowEditProfileModal(true)}
         pendingAlertsCount={pendingCount}
       />
+
+      {/* Persistent Floating Emergency SOS Alert Banner (when active matching SOS is triggered) */}
+      {activeCriticalSOS && (
+        <div className="bg-gradient-to-r from-red-700 via-red-600 to-rose-700 text-white shadow-lg border-b-2 border-yellow-400 py-2.5 px-3 sm:px-6 sticky top-14 sm:top-16 z-30 animate-pulse">
+          <div className="w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded-lg bg-yellow-400 text-red-950 font-extrabold flex-shrink-0 animate-bounce">
+                <Flame className="w-4 h-4 fill-red-950" />
+              </span>
+              <div>
+                <span className="font-extrabold tracking-wide uppercase text-yellow-300 mr-1.5">
+                  CRITICAL EMERGENCY SOS:
+                </span>
+                <span className="font-semibold text-white">
+                  <strong>{activeCriticalSOS.bloodGroup}</strong> needed for {activeCriticalSOS.patientName} at {activeCriticalSOS.hospital} ({activeCriticalSOS.district})
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => playEmergencyAlarm()}
+                title="Play Alarm Siren"
+                className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition"
+              >
+                <Volume2 className="w-3.5 h-3.5" /> Siren
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('notifications')}
+                className="px-3 py-1 bg-yellow-400 hover:bg-yellow-300 text-red-950 rounded-lg text-xs font-black shadow-md flex items-center gap-1 transition"
+              >
+                <span>Respond to SOS</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 pb-24 lg:pb-12 overflow-x-hidden">

@@ -81,16 +81,38 @@ export function nextEligibleDate(donor: Donor): Date | null {
 }
 
 export function findEligibleDonors(request: Partial<BloodRequest>, donors: Donor[]): Donor[] {
-  if (!request.bloodGroup || !request.district) return []
+  if (!request.bloodGroup) return []
   const compatible = COMPATIBLE_DONORS[request.bloodGroup] || []
-  return donors.filter(d =>
-    d.district.toLowerCase() === request.district?.toLowerCase() &&
-    compatible.includes(d.bloodGroup) &&
-    d.id !== request.requestorId &&
-    d.phone !== request.requestorPhone &&
-    (d.available !== false) &&
-    canDonate(d),
-  )
+  const targetDistrict = (request.district || '').trim().toLowerCase()
+  const targetState = (request.state || '').trim().toLowerCase()
+  const isCritical = request.urgency === 'critical'
+
+  return donors.filter(d => {
+    if (!d.bloodGroup || !compatible.includes(d.bloodGroup)) return false
+    if (d.id === request.requestorId || (request.requestorPhone && d.phone === request.requestorPhone)) return false
+    if (d.available === false) return false
+    if (!canDonate(d)) return false
+
+    const donorDistrict = (d.district || '').trim().toLowerCase()
+    const donorState = (d.state || '').trim().toLowerCase()
+
+    // 1. Same District Match (Primary)
+    if (targetDistrict && donorDistrict && (donorDistrict === targetDistrict || donorDistrict.includes(targetDistrict) || targetDistrict.includes(donorDistrict))) {
+      return true
+    }
+
+    // 2. Critical SOS Emergency: Alert all matching donors in the same State or if district is unspecified
+    if (isCritical && (targetState === donorState || !targetDistrict || !donorDistrict)) {
+      return true
+    }
+
+    // 3. Fallback: if no district was specified, match all compatible donors
+    if (!targetDistrict) {
+      return true
+    }
+
+    return false
+  })
 }
 
 export function createMatches(donors: Donor[], now: string): Match[] {
@@ -593,6 +615,7 @@ export const store = {
       ...r,
       id: uid(),
       state: r.state || DEFAULT_STATE,
+      district: r.district ? r.district.trim() : DEFAULT_DISTRICT,
       createdAt: now,
       status: 'open',
       matches: [],
@@ -611,6 +634,16 @@ export const store = {
 
     // Trigger loud emergency alarm sound
     playEmergencyAlarm()
+
+    // Cross-Tab & In-App Immediate Broadcast
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('bd_last_sos', JSON.stringify({ req, timestamp: Date.now() }))
+        window.dispatchEvent(new CustomEvent('bloodlink_sos_broadcast', { detail: req }))
+      } catch (evtErr) {
+        console.warn('Broadcast event notice:', evtErr)
+      }
+    }
 
     if (isSupabaseConfigured) {
       try {
@@ -631,6 +664,14 @@ export const store = {
           created_at: req.createdAt,
           status: req.status,
           matches: req.matches,
+        })
+
+        // Broadcast to Supabase Realtime channel
+        const broadcastChannel = supabase.channel('bloodlink-emergency-broadcast')
+        broadcastChannel.send({
+          type: 'broadcast',
+          event: 'sos_alert',
+          payload: req,
         })
       } catch (e) {
         console.warn('Supabase addRequest error:', e)
@@ -683,6 +724,43 @@ export const store = {
 
   setCurrentUser(u: CurrentUser) {
     localStorage.setItem('bd_current_user', JSON.stringify(u))
+
+    // Ensure this user exists in donors registry so matching & SOS notification is guaranteed
+    if (u.bloodGroup && u.phone) {
+      const donors = this.getDonors()
+      const existingIdx = donors.findIndex(
+        d => d.id === u.id || d.phone === u.phone || (u.email && d.email === u.email)
+      )
+      if (existingIdx >= 0) {
+        donors[existingIdx] = {
+          ...donors[existingIdx],
+          name: u.name,
+          phone: u.phone,
+          email: u.email || donors[existingIdx].email,
+          bloodGroup: u.bloodGroup,
+          state: u.state || DEFAULT_STATE,
+          district: u.district || DEFAULT_DISTRICT,
+          avatar: u.avatar || donors[existingIdx].avatar,
+          available: u.isDonor !== false,
+        }
+      } else {
+        donors.push({
+          id: u.id,
+          name: u.name,
+          phone: u.phone,
+          email: u.email || '',
+          bloodGroup: u.bloodGroup,
+          state: u.state || DEFAULT_STATE,
+          district: u.district || DEFAULT_DISTRICT,
+          avatar: u.avatar,
+          registeredAt: new Date().toISOString(),
+          totalDonations: 0,
+          available: true,
+          lastDonation: null,
+        })
+      }
+      this.setDonors(donors)
+    }
   },
 
   clearCurrentUser() {
@@ -708,6 +786,7 @@ export const store = {
       if (district) existing.district = district
       if (state) existing.state = state
       localStorage.setItem('bd_users', JSON.stringify(users))
+      this.setCurrentUser(existing)
       return existing
     }
     const user: CurrentUser = {
@@ -719,9 +798,11 @@ export const store = {
       bloodGroup: bloodGroup || 'O+',
       district: district || DEFAULT_DISTRICT,
       state: state || DEFAULT_STATE,
+      isDonor: true,
     }
     users.push(user)
     localStorage.setItem('bd_users', JSON.stringify(users))
+    this.setCurrentUser(user)
     return user
   },
 
