@@ -68,6 +68,9 @@ export interface BloodRequest {
   urgency: Urgency
   hospital: string
   unitsNeeded?: number
+  neededDate?: string
+  neededTime?: string
+  requiredBy?: string
   notes: string
   createdAt: string
   status: RequestStatus

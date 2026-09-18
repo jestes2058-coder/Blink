@@ -17,6 +17,7 @@ import {
   Sparkles,
   Phone,
   Edit3,
+  Calendar,
 } from 'lucide-react'
 import type { CurrentUser, View } from '../types'
 import {
@@ -28,6 +29,7 @@ import {
   getDonorBadge,
   COMPATIBLE_DONORS,
 } from '../store'
+import { formatRequestSchedule } from '../utils/dateSchedule'
 import BloodBadge from '../components/BloodBadge'
 import UrgencyBadge from '../components/UrgencyBadge'
 import DonorCardModal from '../components/DonorCardModal'
@@ -418,11 +420,15 @@ export default function Home({
                         <p className="text-xs text-gray-600">
                           {req.hospital} · {req.district}
                         </p>
+                        <p className="text-[11px] font-bold text-red-700 flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-3 h-3 text-red-600" />
+                          <span>Needed: {formatRequestSchedule(req.requiredBy, req.neededDate, req.neededTime, req.urgency)}</span>
+                        </p>
                       </div>
                     </div>
 
                     <button
-                      onClick={() => setView('request-blood')}
+                      onClick={() => setView('notifications')}
                       className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-800 font-bold text-xs rounded-xl transition whitespace-nowrap self-end sm:self-auto"
                     >
                       View Details

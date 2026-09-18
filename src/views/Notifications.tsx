@@ -23,6 +23,7 @@ import {
   X,
   Send,
   Eye,
+  Calendar,
 } from 'lucide-react'
 import type { CurrentUser, View, BloodRequest, SentEmailAlert } from '../types'
 import {
@@ -34,6 +35,7 @@ import {
   playEmergencyAlarm,
   generateDonorAlertEmail,
 } from '../store'
+import { formatRequestSchedule } from '../utils/dateSchedule'
 import BloodBadge from '../components/BloodBadge'
 import UrgencyBadge from '../components/UrgencyBadge'
 import UserAvatar from '../components/UserAvatar'
@@ -320,6 +322,20 @@ export default function Notifications({ user, setView, onToast }: Props) {
                       <BloodBadge group={req.bloodGroup} size="lg" />
                     </div>
 
+                    {/* Scheduled When Needed Banner */}
+                    <div className="p-3 rounded-2xl bg-red-50/70 border border-red-200/80 flex items-center justify-between flex-wrap gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-red-700 flex-shrink-0" />
+                        <span className="text-gray-600 font-semibold">When Needed:</span>
+                        <span className="font-extrabold text-red-950">
+                          {formatRequestSchedule(req.requiredBy, req.neededDate, req.neededTime, req.urgency)}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-red-800 border border-red-200 uppercase">
+                        {req.urgency}
+                      </span>
+                    </div>
+
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-gray-50 p-3.5 sm:p-4 rounded-2xl">
                       <div>
                         <span className="text-gray-600 font-semibold block mb-0.5">District</span>
@@ -332,7 +348,7 @@ export default function Notifications({ user, setView, onToast }: Props) {
                         <span className="font-bold text-gray-800">{req.unitsNeeded || 1} Unit(s)</span>
                       </div>
                       <div className="col-span-2 sm:col-span-1">
-                        <span className="text-gray-600 font-semibold block mb-0.5">Time of Request</span>
+                        <span className="text-gray-600 font-semibold block mb-0.5">Time of Broadcast</span>
                         <span className="font-bold text-gray-800 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" /> {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -413,6 +429,10 @@ export default function Notifications({ user, setView, onToast }: Props) {
                             </div>
                             <p className="text-xs text-gray-600 mt-0.5">
                               {req.hospital} · {req.district}
+                            </p>
+                            <p className="text-[11px] text-red-700 font-semibold mt-0.5 flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-red-600 inline" />
+                              <span>Needed: {formatRequestSchedule(req.requiredBy, req.neededDate, req.neededTime, req.urgency)}</span>
                             </p>
                           </div>
                         </div>

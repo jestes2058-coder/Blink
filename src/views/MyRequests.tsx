@@ -14,9 +14,11 @@ import {
   Trash2,
   Share2,
   CheckCircle2,
+  Calendar,
 } from 'lucide-react'
 import type { CurrentUser, View, BloodRequest } from '../types'
 import { store } from '../store'
+import { formatRequestSchedule } from '../utils/dateSchedule'
 import BloodBadge from '../components/BloodBadge'
 import UrgencyBadge from '../components/UrgencyBadge'
 import UserAvatar from '../components/UserAvatar'
@@ -183,8 +185,12 @@ export default function MyRequests({ user, setView, onToast }: Props) {
                           <MapPin className="w-3.5 h-3.5 text-red-600" /> {req.hospital} ({req.district}{req.state ? `, ${req.state}` : ''})
                         </span>
                         <span>·</span>
+                        <span className="flex items-center gap-1 font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-lg border border-red-200">
+                          <Calendar className="w-3.5 h-3.5 text-red-600" /> Needed: {formatRequestSchedule(req.requiredBy, req.neededDate, req.neededTime, req.urgency)}
+                        </span>
+                        <span>·</span>
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-gray-500" /> {timeAgo(req.createdAt)}
+                          <Clock className="w-3.5 h-3.5 text-gray-500" /> Created {timeAgo(req.createdAt)}
                         </span>
                       </p>
                     </div>

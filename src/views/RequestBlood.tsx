@@ -13,6 +13,9 @@ import {
   ArrowRight,
   Flame,
   Mail,
+  Calendar,
+  Clock,
+  Sparkles,
 } from 'lucide-react'
 import type { BloodGroup, Urgency, CurrentUser, View } from '../types'
 import {
@@ -26,6 +29,13 @@ import {
   getDistrictsForState,
   DEFAULT_STATE,
 } from '../data/indianLocations'
+import {
+  getTodayDateString,
+  getTomorrowDateString,
+  getDefaultTimeString,
+  computeScheduleDetails,
+  format12Hour,
+} from '../utils/dateSchedule'
 import BloodBadge from '../components/BloodBadge'
 import UrgencyBadge from '../components/UrgencyBadge'
 import UserAvatar from '../components/UserAvatar'
@@ -49,9 +59,17 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
   const [error, setError] = useState('')
   const [matchCount, setMatchCount] = useState(0)
 
+  // Timing & Schedule state
+  const [scheduleType, setScheduleType] = useState<'immediate' | 'today' | 'tomorrow' | 'scheduled'>('today')
+  const [neededDate, setNeededDate] = useState(getTodayDateString())
+  const [neededTime, setNeededTime] = useState(getDefaultTimeString(2))
+
   const donors = store.getDonors()
   const compatibleTypes = COMPATIBLE_DONORS[bloodGroup] || []
   const availableDistricts = getDistrictsForState(state)
+
+  // Real-time schedule calculation
+  const scheduleDetails = computeScheduleDetails(scheduleType, neededDate, neededTime)
 
   function handleStateChange(newState: string) {
     setState(newState)
@@ -59,6 +77,25 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
     if (!dists.includes(district)) {
       setDistrict(dists[0] || '')
     }
+  }
+
+  function handleUrgencySelect(u: Urgency) {
+    setUrgency(u)
+    if (u === 'critical') {
+      setScheduleType('immediate')
+    } else if (u === 'planned' && scheduleType === 'immediate') {
+      setScheduleType('scheduled')
+      setNeededDate(getTomorrowDateString())
+    }
+  }
+
+  // Quick preset time helpers
+  function setQuickTimeOffset(hours: number) {
+    const d = new Date()
+    d.setHours(d.getHours() + hours)
+    const h = String(d.getHours()).padStart(2, '0')
+    const m = String(Math.floor(d.getMinutes() / 15) * 15).padStart(2, '0')
+    setNeededTime(`${h}:${m}`)
   }
 
   // Calculate live available donors in the selected district
@@ -75,7 +112,7 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
   const urgencies: { val: Urgency; label: string; desc: string }[] = [
     { val: 'critical', label: 'Critical / Emergency', desc: 'Needed within 1–4 hours (Trauma/Surgery)' },
     { val: 'urgent', label: 'Urgent', desc: 'Needed within 24 hours' },
-    { val: 'planned', label: 'Planned / Scheduled', desc: 'Scheduled within next 7 days' },
+    { val: 'planned', label: 'Planned / Scheduled', desc: 'Scheduled procedure or future transfusion' },
   ]
 
   function handlePreview(e: React.FormEvent) {
@@ -102,6 +139,9 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
       urgency,
       hospital: hospital.trim(),
       unitsNeeded,
+      neededDate: scheduleDetails.neededDate,
+      neededTime: scheduleDetails.neededTime,
+      requiredBy: scheduleDetails.displayBadge,
       notes: notes.trim(),
     })
 
@@ -126,8 +166,22 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
             Blood Request Broadcasted!
           </h2>
           <p className="text-gray-500 text-xs sm:text-sm mt-2 max-w-md mx-auto">
-            Your emergency request has been matched with eligible district donors in {district}, {state}. You will receive live response alerts on your dashboard.
+            Your requirement for <strong>{patientName}</strong> has been scheduled and matched with eligible donors in {district}, {state}.
           </p>
+        </div>
+
+        {/* Scheduled summary card */}
+        <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 text-left max-w-md mx-auto space-y-2 text-xs">
+          <p className="font-bold text-gray-800 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-red-600 flex-shrink-0" />
+            <span>Scheduled Transfusion Timing:</span>
+          </p>
+          <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-1">
+            <p className="text-red-700 font-extrabold text-sm">{scheduleDetails.displayBadge}</p>
+            <p className="text-gray-500 text-[11px]">
+              Day: <span className="font-bold text-gray-700">{scheduleDetails.dayOfWeek}</span> · Date: <span className="font-bold text-gray-700">{scheduleDetails.formattedDate}</span> · Time: <span className="font-bold text-gray-700">{scheduleDetails.formattedTime}</span>
+            </p>
+          </div>
         </div>
 
         {/* Situational Email Broadcast Alert Card */}
@@ -137,7 +191,7 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
             <span>Situational Email Alerts Dispatched</span>
           </p>
           <p className="text-gray-600 text-[11px] leading-relaxed">
-            Personalized emergency alert emails containing patient hospital details, required blood units, and response action links were dispatched to all eligible {bloodGroup} compatible donors in {district}.
+            Personalized emergency alert emails containing patient hospital details, required blood units, and scheduled date/time ({scheduleDetails.displayBadge}) were dispatched to all eligible {bloodGroup} compatible donors in {district}.
           </p>
         </div>
 
@@ -170,9 +224,9 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
             ← Back to Edit
           </button>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ fontFamily: "'DM Serif Display', serif" }}>
-            Confirm Request
+            Confirm Request Details
           </h1>
-          <p className="text-red-100 text-xs mt-1">Review patient details and matching reach</p>
+          <p className="text-red-100 text-xs mt-1">Review scheduled date, time, patient details and matching reach</p>
         </div>
 
         <div className="bg-white rounded-3xl border border-red-100 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -186,6 +240,33 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
               </div>
             </div>
             <UrgencyBadge urgency={urgency} />
+          </div>
+
+          {/* Scheduled Timing Callout Banner */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-red-50 via-rose-50 to-amber-50 border border-red-200 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-red-700 flex-shrink-0" />
+                <span className="font-extrabold text-sm text-red-950">When Blood is Needed:</span>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200 uppercase tracking-wide">
+                {scheduleDetails.relativeLabel}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center pt-1">
+              <div className="bg-white/80 backdrop-blur-sm p-2.5 rounded-xl border border-red-100">
+                <span className="text-[10px] uppercase font-bold text-gray-500 block">Day of Week</span>
+                <span className="text-sm font-extrabold text-gray-900">{scheduleDetails.dayOfWeek}</span>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm p-2.5 rounded-xl border border-red-100">
+                <span className="text-[10px] uppercase font-bold text-gray-500 block">Scheduled Date</span>
+                <span className="text-sm font-extrabold text-gray-900">{scheduleDetails.formattedDate}</span>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm p-2.5 rounded-xl border border-red-100">
+                <span className="text-[10px] uppercase font-bold text-gray-500 block">Required Time</span>
+                <span className="text-sm font-extrabold text-red-700">{scheduleDetails.formattedTime}</span>
+              </div>
+            </div>
           </div>
 
           {/* Details Grid */}
@@ -231,7 +312,7 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
             </div>
             <p className="text-[11px] mt-1 opacity-90">
               {matchCount > 0
-                ? 'Matched donors will receive an instant emergency push notification and alarm alert.'
+                ? 'Matched donors will receive an instant push alert, situational email with the scheduled time, and alarm notification.'
                 : 'Your request will stay active on the emergency board and match when donors become available.'}
             </p>
           </div>
@@ -264,11 +345,11 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
           Request Blood for Patient
         </h1>
         <p className="text-red-100 text-xs sm:text-sm">
-          Broadcast your urgent blood requirement to verified volunteer donors in your district.
+          Plan, schedule, or broadcast immediate emergency blood requirements to verified donors in your district.
         </p>
       </div>
 
-      <form onSubmit={handlePreview} className="bg-white rounded-3xl border border-red-100 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <form onSubmit={handlePreview} className="bg-white rounded-3xl border border-red-100 shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6">
         {error && (
           <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm font-semibold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" /> {error}
@@ -336,7 +417,7 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
                 <button
                   key={u.val}
                   type="button"
-                  onClick={() => setUrgency(u.val)}
+                  onClick={() => handleUrgencySelect(u.val)}
                   className={`p-4 rounded-2xl border-2 text-left transition-colors duration-150 flex flex-col justify-between ${
                     isSelected
                       ? u.val === 'critical'
@@ -354,6 +435,208 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
                 </button>
               )
             })}
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* NEW SECTION: When is Blood Required? (Date, Day & Time Scheduling) */}
+        {/* ========================================================================= */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-red-50/50 border-2 border-red-200/80 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-red-700" />
+              <span className="text-xs font-bold uppercase tracking-wider text-red-950">
+                When is Blood Wanted / Planned? (Date & Time) *
+              </span>
+            </div>
+            <span className="text-[11px] font-semibold text-gray-600">
+              Day & Time are automatically computed
+            </span>
+          </div>
+
+          {/* Quick Schedule Presets */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setScheduleType('immediate')
+                setUrgency('critical')
+              }}
+              className={`p-3 rounded-2xl border-2 text-xs font-bold text-center transition flex flex-col items-center justify-center gap-1 ${
+                scheduleType === 'immediate'
+                  ? 'bg-red-700 border-red-700 text-white shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
+              }`}
+            >
+              <span className="flex items-center gap-1">⚡ Immediate / ASAP</span>
+              <span className={`text-[10px] font-normal ${scheduleType === 'immediate' ? 'text-red-100' : 'text-gray-500'}`}>
+                Within 1–4 hrs
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setScheduleType('today')
+                setNeededDate(getTodayDateString())
+              }}
+              className={`p-3 rounded-2xl border-2 text-xs font-bold text-center transition flex flex-col items-center justify-center gap-1 ${
+                scheduleType === 'today'
+                  ? 'bg-red-700 border-red-700 text-white shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
+              }`}
+            >
+              <span>📅 Today</span>
+              <span className={`text-[10px] font-normal ${scheduleType === 'today' ? 'text-red-100' : 'text-gray-500'}`}>
+                Specific time today
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setScheduleType('tomorrow')
+                setNeededDate(getTomorrowDateString())
+              }}
+              className={`p-3 rounded-2xl border-2 text-xs font-bold text-center transition flex flex-col items-center justify-center gap-1 ${
+                scheduleType === 'tomorrow'
+                  ? 'bg-red-700 border-red-700 text-white shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
+              }`}
+            >
+              <span>🌅 Tomorrow</span>
+              <span className={`text-[10px] font-normal ${scheduleType === 'tomorrow' ? 'text-red-100' : 'text-gray-500'}`}>
+                Specific time tomorrow
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setScheduleType('scheduled')
+                setNeededDate(getTomorrowDateString())
+              }}
+              className={`p-3 rounded-2xl border-2 text-xs font-bold text-center transition flex flex-col items-center justify-center gap-1 ${
+                scheduleType === 'scheduled'
+                  ? 'bg-red-700 border-red-700 text-white shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
+              }`}
+            >
+              <span>🗓️ Planned / Scheduled</span>
+              <span className={`text-[10px] font-normal ${scheduleType === 'scheduled' ? 'text-red-100' : 'text-gray-500'}`}>
+                Select future date
+              </span>
+            </button>
+          </div>
+
+          {/* Date & Time Input Row */}
+          {scheduleType !== 'immediate' && (
+            <div className="bg-white p-4 rounded-2xl border border-red-100 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Date Picker (enabled for 'scheduled' or shows fixed date for today/tomorrow) */}
+                <div>
+                  <label htmlFor="neededDate" className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-red-600" />
+                    <span>Required Date *</span>
+                  </label>
+                  <input
+                    id="neededDate"
+                    name="neededDate"
+                    type="date"
+                    min={getTodayDateString()}
+                    value={scheduleDetails.neededDate}
+                    disabled={scheduleType === 'today' || scheduleType === 'tomorrow'}
+                    onChange={(e) => setNeededDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-75 disabled:bg-gray-100"
+                  />
+                </div>
+
+                {/* Time Picker */}
+                <div>
+                  <label htmlFor="neededTime" className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-red-600" />
+                    <span>Required Time *</span>
+                  </label>
+                  <input
+                    id="neededTime"
+                    name="neededTime"
+                    type="time"
+                    value={neededTime}
+                    onChange={(e) => setNeededTime(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-400"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Time Presets */}
+              <div>
+                <span className="text-[11px] font-semibold text-gray-500 block mb-1.5">
+                  Quick Time Shortcuts:
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setQuickTimeOffset(1)}
+                    className="px-2.5 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-700 text-gray-700 rounded-lg text-[11px] font-semibold transition"
+                  >
+                    +1 Hour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickTimeOffset(2)}
+                    className="px-2.5 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-700 text-gray-700 rounded-lg text-[11px] font-semibold transition"
+                  >
+                    +2 Hours
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickTimeOffset(4)}
+                    className="px-2.5 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-700 text-gray-700 rounded-lg text-[11px] font-semibold transition"
+                  >
+                    +4 Hours
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNeededTime('10:00')}
+                    className="px-2.5 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-700 text-gray-700 rounded-lg text-[11px] font-semibold transition"
+                  >
+                    Morning (10:00 AM)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNeededTime('14:30')}
+                    className="px-2.5 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-700 text-gray-700 rounded-lg text-[11px] font-semibold transition"
+                  >
+                    Afternoon (02:30 PM)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNeededTime('18:00')}
+                    className="px-2.5 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-700 text-gray-700 rounded-lg text-[11px] font-semibold transition"
+                  >
+                    Evening (06:00 PM)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Live Calculated Schedule Badge */}
+          <div className="p-3.5 rounded-2xl bg-white border border-red-200 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-red-100 text-red-700 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase text-gray-500">Calculated Needed Schedule</p>
+                <p className="text-xs sm:text-sm font-extrabold text-red-950">
+                  {scheduleDetails.displayBadge}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-xl bg-red-50 text-red-800 border border-red-200">
+              {scheduleDetails.dayOfWeek}
+            </span>
           </div>
         </div>
 
@@ -449,7 +732,7 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Trauma emergency, O- or O+ needed immediately"
+              placeholder="e.g. Scheduled elective surgery, please reach 30 mins before transfusion"
               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
             />
           </div>

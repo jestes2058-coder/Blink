@@ -7,6 +7,7 @@ import {
   DEFAULT_DISTRICT,
   KERALA_DISTRICTS,
 } from './data/indianLocations'
+import { computeScheduleDetails, formatRequestSchedule } from './utils/dateSchedule'
 
 // Strict Email Validator
 export function isValidEmail(email: string): boolean {
@@ -166,6 +167,7 @@ PATIENT & EMERGENCY DETAILS:
 ------------------------------------------------------------------------
 - Patient Name: ${request.patientName}
 - Required Blood Group: ${request.bloodGroup}
+- When Needed (Schedule): ${formatRequestSchedule(request.requiredBy, request.neededDate, request.neededTime, request.urgency)}
 - Units Needed: ${request.unitsNeeded || 1} Unit(s)
 - Hospital/Facility: ${request.hospital}
 - District & State: ${request.district}, ${request.state || 'India'}
@@ -243,6 +245,10 @@ BloodLink Transfusion Matching Network
                       <tr>
                         <td style="color: #64748b; font-weight: 600;">District & State:</td>
                         <td style="color: #0f172a; font-weight: 700; text-align: right;">${request.district}, ${request.state || 'India'}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 600;">When Needed (Schedule):</td>
+                        <td style="color: #b91c1c; font-weight: 800; text-align: right;">${formatRequestSchedule(request.requiredBy, request.neededDate, request.neededTime, request.urgency)}</td>
                       </tr>
                       <tr>
                         <td style="color: #64748b; font-weight: 600;">Units Required:</td>
@@ -463,24 +469,33 @@ export const store = {
       // Sync Real Requests from Supabase
       const { data: reqData, error: reqErr } = await supabase.from('blood_requests').select('*')
       if (!reqErr && reqData) {
-        const mappedReq: BloodRequest[] = reqData.map(r => ({
-          id: r.id,
-          requestorId: r.requestor_id,
-          requestorName: r.requestor_name,
-          requestorPhone: r.requestor_phone,
-          requestorAvatar: r.requestor_avatar,
-          patientName: r.patient_name,
-          bloodGroup: r.blood_group as BloodGroup,
-          state: r.state || DEFAULT_STATE,
-          district: r.district,
-          urgency: r.urgency,
-          hospital: r.hospital,
-          unitsNeeded: r.units_needed,
-          notes: r.notes || '',
-          createdAt: r.created_at || new Date().toISOString(),
-          status: r.status,
-          matches: r.matches || [],
-        }))
+        const mappedReq: BloodRequest[] = reqData.map(r => {
+          const scheduleMatch = (r.notes || '').match(/\[Schedule:\s*([^\]]+)\]/)
+          const rawNotes = (r.notes || '').replace(/\[Schedule:\s*[^\]]+\]\s*/g, '').trim()
+          const computedReqBy = r.required_by || (scheduleMatch ? scheduleMatch[1] : undefined)
+
+          return {
+            id: r.id,
+            requestorId: r.requestor_id,
+            requestorName: r.requestor_name,
+            requestorPhone: r.requestor_phone,
+            requestorAvatar: r.requestor_avatar,
+            patientName: r.patient_name,
+            bloodGroup: r.blood_group as BloodGroup,
+            state: r.state || DEFAULT_STATE,
+            district: r.district,
+            urgency: r.urgency,
+            hospital: r.hospital,
+            unitsNeeded: r.units_needed,
+            neededDate: r.needed_date,
+            neededTime: r.needed_time,
+            requiredBy: computedReqBy || formatRequestSchedule(undefined, r.needed_date, r.needed_time, r.urgency),
+            notes: rawNotes,
+            createdAt: r.created_at || new Date().toISOString(),
+            status: r.status,
+            matches: r.matches || [],
+          }
+        })
         this.setRequests(mappedReq)
       }
     } catch (err) {
@@ -615,11 +630,16 @@ export const store = {
   async addRequest(r: Omit<BloodRequest, 'id' | 'createdAt' | 'status' | 'matches'>): Promise<BloodRequest> {
     const requests = this.getRequests()
     const now = new Date().toISOString()
+    const requiredBy = r.requiredBy || formatRequestSchedule(undefined, r.neededDate, r.neededTime, r.urgency)
+
     const req: BloodRequest = {
       ...r,
       id: uid(),
       state: r.state || DEFAULT_STATE,
       district: r.district ? r.district.trim() : DEFAULT_DISTRICT,
+      neededDate: r.neededDate,
+      neededTime: r.neededTime,
+      requiredBy,
       createdAt: now,
       status: 'open',
       matches: [],
@@ -651,6 +671,11 @@ export const store = {
 
     if (isSupabaseConfigured) {
       try {
+        // Embed schedule tag in notes so schema without custom columns retains schedule across any client
+        const notesWithSchedule = req.requiredBy
+          ? `[Schedule: ${req.requiredBy}] ${req.notes || ''}`.trim()
+          : req.notes || ''
+
         await supabase.from('blood_requests').insert({
           id: req.id,
           requestor_id: req.requestorId,
@@ -662,7 +687,7 @@ export const store = {
           urgency: req.urgency,
           hospital: req.hospital,
           units_needed: req.unitsNeeded || 1,
-          notes: req.notes,
+          notes: notesWithSchedule,
           created_at: req.createdAt,
           status: req.status,
           matches: req.matches,

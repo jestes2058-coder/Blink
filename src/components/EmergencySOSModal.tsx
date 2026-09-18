@@ -51,6 +51,7 @@ export default function EmergencySOSModal({ user, onClose, onSuccess }: Props) {
         urgency: 'critical',
         hospital: hospital.trim(),
         unitsNeeded: 2,
+        requiredBy: '⚡ Immediate / Critical Emergency',
         notes: '🚨 URGENT SOS EMERGENCY: Critical transfusion needed immediately.',
       })
 
