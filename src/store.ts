@@ -799,9 +799,22 @@ export const store = {
 
   addUser(name: string, phone: string, email?: string, avatar?: string, bloodGroup?: BloodGroup, district?: string, state?: string): CurrentUser {
     const users = this.getUsers()
-    const existing = users.find(u => (email && u.email === email) || u.phone === phone)
+    const cleanPhone = (phone || '').replace(/\D/g, '')
+    const last10 = cleanPhone.length >= 7 ? cleanPhone.slice(-10) : ''
+
+    const existing = users.find(u => {
+      if (email && u.email && u.email.toLowerCase() === email.toLowerCase()) return true
+      if (u.phone === phone) return true
+      if (last10 && u.phone) {
+        const uDigits = u.phone.replace(/\D/g, '')
+        if (uDigits.slice(-10) === last10) return true
+      }
+      return false
+    })
+
     if (existing) {
-      existing.name = name
+      existing.name = name || existing.name
+      if (phone) existing.phone = phone
       if (email) existing.email = email
       if (avatar) existing.avatar = avatar
       if (bloodGroup) existing.bloodGroup = bloodGroup
@@ -832,17 +845,39 @@ export const store = {
   async saveUserProfile(user: CurrentUser, isVolunteerDonor: boolean, isAvailable: boolean = true) {
     this.setCurrentUser(user)
 
+    const cleanUserPhone = (user.phone || '').replace(/\D/g, '')
+    const userLast10 = cleanUserPhone.length >= 7 ? cleanUserPhone.slice(-10) : ''
+
     const users = this.getUsers()
-    const userIndex = users.findIndex(u => u.id === user.id || u.phone === user.phone)
+    const userIndex = users.findIndex(u => {
+      if (u.id === user.id) return true
+      if (u.phone === user.phone) return true
+      if (userLast10 && u.phone) {
+        const uDigits = u.phone.replace(/\D/g, '')
+        if (uDigits.slice(-10) === userLast10) return true
+      }
+      if (user.email && u.email && u.email.toLowerCase() === user.email.toLowerCase()) return true
+      return false
+    })
+
     if (userIndex >= 0) {
-      users[userIndex] = user
+      users[userIndex] = { ...users[userIndex], ...user }
     } else {
       users.push(user)
     }
     localStorage.setItem('bd_users', JSON.stringify(users))
 
     const donors = this.getDonors()
-    const donorIndex = donors.findIndex(d => d.id === user.id || d.phone === user.phone || (user.email && d.email === user.email))
+    const donorIndex = donors.findIndex(d => {
+      if (d.id === user.id) return true
+      if (d.phone === user.phone) return true
+      if (userLast10 && d.phone) {
+        const dDigits = d.phone.replace(/\D/g, '')
+        if (dDigits.slice(-10) === userLast10) return true
+      }
+      if (user.email && d.email && d.email.toLowerCase() === user.email.toLowerCase()) return true
+      return false
+    })
 
     if (isVolunteerDonor && user.bloodGroup && user.district) {
       if (donorIndex >= 0) {

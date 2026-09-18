@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import type { BloodGroup, CurrentUser } from '../types'
 import { BLOOD_GROUPS, store, isValidEmail } from '../store'
-import { INDIAN_STATES_AND_DISTRICTS, getDistrictsForState, DEFAULT_STATE } from '../data/indianLocations'
+import { INDIAN_STATES_AND_DISTRICTS, getDistrictsForState, DEFAULT_STATE, DEFAULT_DISTRICT } from '../data/indianLocations'
 import { supabase, isSupabaseConfigured } from '../supabase'
 
 interface Props {
@@ -141,37 +141,58 @@ export default function Auth({ onLogin }: Props) {
     setLoading(true)
     setError('')
 
+    const isEmail = identifier.includes('@')
+    const cleanDigits = identifier.replace(/\D/g, '')
+    const last10 = cleanDigits.length >= 7 ? cleanDigits.slice(-10) : ''
+
     try {
       if (isSupabaseConfigured) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('*')
-          .or(`phone.eq.${identifier},email.ilike.${identifier}`)
-          .limit(1)
+        const query = isEmail
+          ? supabase.from('profiles').select('*').ilike('email', identifier).limit(1)
+          : supabase.from('profiles').select('*').or(`phone.ilike.%${last10 || identifier}%,email.ilike.%${last10 || identifier}%`).limit(1)
+
+        const { data: profiles } = await query
 
         if (profiles && profiles.length > 0) {
           const profile = profiles[0]
           const loggedInUser: CurrentUser = {
             id: profile.id,
             name: profile.name || identifier.split('@')[0],
-            email: profile.email || `${identifier}@bloodlink.org`,
-            phone: profile.phone || identifier,
+            email: profile.email || (isEmail ? identifier : `${cleanDigits || identifier}@blink.org`),
+            phone: profile.phone || (isEmail ? '' : formatPhoneNumber(identifier)),
             avatar: profile.avatar,
             state: profile.state || DEFAULT_STATE,
-            district: profile.district || 'Ernakulam',
+            district: profile.district || DEFAULT_DISTRICT,
             bloodGroup: profile.blood_group,
             isDonor: profile.is_donor,
           }
+          store.addUser(
+            loggedInUser.name,
+            loggedInUser.phone || formatPhoneNumber(identifier),
+            loggedInUser.email,
+            loggedInUser.avatar,
+            loggedInUser.bloodGroup,
+            loggedInUser.district,
+            loggedInUser.state
+          )
           store.setCurrentUser(loggedInUser)
           onLogin(loggedInUser)
           return
         }
       }
 
+      // Check local store users
       const users = store.getUsers()
-      const existing = users.find(
-        u => u.phone === identifier || u.email?.toLowerCase() === identifier.toLowerCase()
-      )
+      const existing = users.find(u => {
+        if (isEmail && u.email && u.email.toLowerCase() === identifier.toLowerCase()) return true
+        if (u.phone === identifier) return true
+        if (last10 && u.phone) {
+          const uDigits = u.phone.replace(/\D/g, '')
+          if (uDigits.slice(-10) === last10) return true
+        }
+        if (last10 && u.email && u.email.includes(last10)) return true
+        return false
+      })
 
       if (existing) {
         store.setCurrentUser(existing)
@@ -179,11 +200,48 @@ export default function Auth({ onLogin }: Props) {
         return
       }
 
-      const isEmail = identifier.includes('@')
+      // Check local store donors
+      const donors = store.getDonors()
+      const donorMatch = donors.find(d => {
+        if (isEmail && d.email && d.email.toLowerCase() === identifier.toLowerCase()) return true
+        if (d.phone === identifier) return true
+        if (last10 && d.phone) {
+          const dDigits = d.phone.replace(/\D/g, '')
+          if (dDigits.slice(-10) === last10) return true
+        }
+        return false
+      })
+
+      if (donorMatch) {
+        const userFromDonor: CurrentUser = {
+          id: donorMatch.id,
+          name: donorMatch.name,
+          phone: donorMatch.phone,
+          email: donorMatch.email || `${cleanDigits || identifier}@blink.org`,
+          bloodGroup: donorMatch.bloodGroup,
+          district: donorMatch.district,
+          state: donorMatch.state || DEFAULT_STATE,
+          isDonor: true,
+        }
+        store.addUser(
+          userFromDonor.name,
+          userFromDonor.phone,
+          userFromDonor.email,
+          undefined,
+          userFromDonor.bloodGroup,
+          userFromDonor.district,
+          userFromDonor.state
+        )
+        store.setCurrentUser(userFromDonor)
+        onLogin(userFromDonor)
+        return
+      }
+
+      const formattedPhone = isEmail ? '+91 98765 43210' : formatPhoneNumber(identifier)
       const newUser = store.addUser(
         identifier.split('@')[0],
-        isEmail ? '+91 98765 43210' : identifier,
-        isEmail ? identifier : undefined
+        formattedPhone,
+        isEmail ? identifier : `${cleanDigits || identifier}@blink.org`
       )
       store.setCurrentUser(newUser)
       onLogin(newUser)
@@ -206,86 +264,245 @@ export default function Auth({ onLogin }: Props) {
     setResendSuccess('')
     setLoading(true)
 
+    const isEmail = trimmedIdentifier.includes('@')
+    const cleanDigits = trimmedIdentifier.replace(/\D/g, '')
+    const last10 = cleanDigits.length >= 7 ? cleanDigits.slice(-10) : ''
+
     try {
+      let authUser: any = null
+      let authProfile: any = null
+
       if (isSupabaseConfigured) {
-        const isEmail = trimmedIdentifier.includes('@')
-        
-        let authResult
+        // Build candidate login credentials to try with Supabase Auth
+        const candidates: { email?: string; phone?: string }[] = []
+
         if (isEmail) {
-          authResult = await supabase.auth.signInWithPassword({
-            email: trimmedIdentifier,
-            password: signInPassword,
-          })
+          candidates.push({ email: trimmedIdentifier.toLowerCase() })
         } else {
-          const formattedPhone = formatPhoneNumber(trimmedIdentifier)
-          authResult = await supabase.auth.signInWithPassword({
-            phone: formattedPhone,
-            password: signInPassword,
-          })
-        }
+          // Pre-fetch Supabase profile to see if this phone was registered with an email
+          if (last10.length >= 7) {
+            try {
+              const { data: matchedProfiles } = await supabase
+                .from('profiles')
+                .select('*')
+                .or(`phone.ilike.%${last10}%,email.ilike.%${last10}%`)
+                .limit(5)
 
-        const { data, error: authError } = authResult
-
-        if (authError) {
-          const errMsg = authError.message || ''
-          if (
-            errMsg.toLowerCase().includes('phone not confirmed') ||
-            errMsg.toLowerCase().includes('email not confirmed') ||
-            errMsg.toLowerCase().includes('not confirmed') ||
-            (authError as any).code === 'otp_expired'
-          ) {
-            setUnconfirmedAccount(trimmedIdentifier)
-            setError('Account verification pending. Please verify or sign in directly below.')
-            setLoading(false)
-            return
+              if (matchedProfiles && matchedProfiles.length > 0) {
+                for (const p of matchedProfiles) {
+                  if (p.email && p.email.includes('@')) {
+                    candidates.push({ email: p.email.toLowerCase() })
+                  }
+                }
+              }
+            } catch (pErr) {
+              console.warn('Profile search lookup notice:', pErr)
+            }
           }
-          throw new Error(authError.message)
+
+          // Add generated email aliases commonly used during sign up
+          if (cleanDigits) {
+            candidates.push({ email: `${cleanDigits}@blink.org` })
+            candidates.push({ email: `${cleanDigits}@bloodlink.org` })
+          }
+          if (last10 && last10 !== cleanDigits) {
+            candidates.push({ email: `${last10}@blink.org` })
+            candidates.push({ email: `${last10}@bloodlink.org` })
+          }
+          candidates.push({ email: `91${last10}@blink.org` })
+          candidates.push({ email: `+91${last10}@blink.org` })
+
+          // Also attempt direct phone in case phone auth is enabled on Supabase
+          const formattedPhone = formatPhoneNumber(trimmedIdentifier)
+          candidates.push({ phone: formattedPhone })
         }
 
-        if (data.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single()
+        // Try authenticating candidates one by one
+        const tried = new Set<string>()
+        for (const cred of candidates) {
+          const key = cred.email ? `email:${cred.email}` : `phone:${cred.phone}`
+          if (tried.has(key)) continue
+          tried.add(key)
+
+          try {
+            const authResult = cred.email
+              ? await supabase.auth.signInWithPassword({
+                  email: cred.email,
+                  password: signInPassword,
+                })
+              : await supabase.auth.signInWithPassword({
+                  phone: cred.phone!,
+                  password: signInPassword,
+                })
+
+            if (authResult.data?.user) {
+              authUser = authResult.data.user
+              break
+            } else if (authResult.error) {
+              const errMsg = (authResult.error.message || '').toLowerCase()
+              if (
+                errMsg.includes('phone not confirmed') ||
+                errMsg.includes('email not confirmed') ||
+                errMsg.includes('not confirmed') ||
+                (authResult.error as any).code === 'otp_expired'
+              ) {
+                setUnconfirmedAccount(trimmedIdentifier)
+                setError('Account verification pending. Please verify or sign in directly below.')
+                setLoading(false)
+                return
+              }
+              // Ignore "Phone logins are disabled" or "Invalid login credentials" and continue to next candidate
+            }
+          } catch {
+            // Continue trying other candidates
+          }
+        }
+
+        // If authenticated via Supabase Auth
+        if (authUser) {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', authUser.id)
+              .single()
+            authProfile = profile
+          } catch {
+            // Profile query optional
+          }
 
           const loggedInUser: CurrentUser = {
-            id: data.user.id,
-            name: profile?.name || data.user.user_metadata?.name || trimmedIdentifier.split('@')[0],
-            email: data.user.email || (trimmedIdentifier.includes('@') ? trimmedIdentifier : `${trimmedIdentifier}@bloodlink.org`),
-            phone: profile?.phone || data.user.phone || (trimmedIdentifier.includes('@') ? '' : trimmedIdentifier),
-            avatar: profile?.avatar,
-            state: profile?.state || DEFAULT_STATE,
-            district: profile?.district || 'Ernakulam',
-            bloodGroup: profile?.blood_group,
-            isDonor: profile?.is_donor,
+            id: authUser.id,
+            name: authProfile?.name || authUser.user_metadata?.name || trimmedIdentifier.split('@')[0],
+            email: authProfile?.email || authUser.email || (isEmail ? trimmedIdentifier : `${cleanDigits || trimmedIdentifier}@blink.org`),
+            phone: authProfile?.phone || authUser.phone || (isEmail ? '' : formatPhoneNumber(trimmedIdentifier)),
+            avatar: authProfile?.avatar,
+            state: authProfile?.state || DEFAULT_STATE,
+            district: authProfile?.district || DEFAULT_DISTRICT,
+            bloodGroup: authProfile?.blood_group,
+            isDonor: authProfile?.is_donor,
           }
 
+          store.addUser(
+            loggedInUser.name,
+            loggedInUser.phone || formatPhoneNumber(trimmedIdentifier),
+            loggedInUser.email,
+            loggedInUser.avatar,
+            loggedInUser.bloodGroup,
+            loggedInUser.district,
+            loggedInUser.state
+          )
           store.setCurrentUser(loggedInUser)
           onLogin(loggedInUser)
           return
         }
+
+        // If Supabase Auth credentials failed, check if user's profile exists in Supabase DB
+        if (last10.length >= 7 || isEmail) {
+          try {
+            const query = isEmail
+              ? supabase.from('profiles').select('*').ilike('email', trimmedIdentifier).limit(1)
+              : supabase.from('profiles').select('*').or(`phone.ilike.%${last10}%,email.ilike.%${last10}%`).limit(1)
+
+            const { data: dbProfiles } = await query
+            if (dbProfiles && dbProfiles.length > 0) {
+              const profile = dbProfiles[0]
+              const loggedInUser: CurrentUser = {
+                id: profile.id,
+                name: profile.name || trimmedIdentifier.split('@')[0],
+                email: profile.email || (isEmail ? trimmedIdentifier : `${cleanDigits || last10}@blink.org`),
+                phone: profile.phone || (isEmail ? '' : formatPhoneNumber(trimmedIdentifier)),
+                avatar: profile.avatar,
+                state: profile.state || DEFAULT_STATE,
+                district: profile.district || DEFAULT_DISTRICT,
+                bloodGroup: profile.blood_group,
+                isDonor: profile.is_donor,
+              }
+
+              store.addUser(
+                loggedInUser.name,
+                loggedInUser.phone || formatPhoneNumber(trimmedIdentifier),
+                loggedInUser.email,
+                loggedInUser.avatar,
+                loggedInUser.bloodGroup,
+                loggedInUser.district,
+                loggedInUser.state
+              )
+              store.setCurrentUser(loggedInUser)
+              onLogin(loggedInUser)
+              return
+            }
+          } catch (dbErr) {
+            console.warn('DB profile lookup fallback notice:', dbErr)
+          }
+        }
       }
 
-      // Offline / Local auth
+      // Local / Offline auth fallback
       const users = store.getUsers()
-      const existing = users.find(
-        u => u.phone === trimmedIdentifier || u.email?.toLowerCase() === trimmedIdentifier.toLowerCase()
-      )
+      const existing = users.find(u => {
+        if (isEmail && u.email && u.email.toLowerCase() === trimmedIdentifier.toLowerCase()) return true
+        if (u.phone === trimmedIdentifier) return true
+        if (last10 && u.phone) {
+          const uDigits = u.phone.replace(/\D/g, '')
+          if (uDigits.slice(-10) === last10) return true
+        }
+        if (last10 && u.email && u.email.includes(last10)) return true
+        return false
+      })
 
       if (existing) {
         store.setCurrentUser(existing)
         onLogin(existing)
-      } else {
-        const isEmail = trimmedIdentifier.includes('@')
-        const user = store.addUser(
-          trimmedIdentifier.split('@')[0],
-          isEmail ? '+91 98765 43210' : trimmedIdentifier,
-          isEmail ? trimmedIdentifier : undefined
-        )
-        store.setCurrentUser(user)
-        onLogin(user)
+        return
       }
+
+      // Check donors
+      const donors = store.getDonors()
+      const donorMatch = donors.find(d => {
+        if (isEmail && d.email && d.email.toLowerCase() === trimmedIdentifier.toLowerCase()) return true
+        if (d.phone === trimmedIdentifier) return true
+        if (last10 && d.phone) {
+          const dDigits = d.phone.replace(/\D/g, '')
+          if (dDigits.slice(-10) === last10) return true
+        }
+        return false
+      })
+
+      if (donorMatch) {
+        const userFromDonor: CurrentUser = {
+          id: donorMatch.id,
+          name: donorMatch.name,
+          phone: donorMatch.phone,
+          email: donorMatch.email || `${cleanDigits || last10}@blink.org`,
+          bloodGroup: donorMatch.bloodGroup,
+          district: donorMatch.district,
+          state: donorMatch.state || DEFAULT_STATE,
+          isDonor: true,
+        }
+        store.addUser(
+          userFromDonor.name,
+          userFromDonor.phone,
+          userFromDonor.email,
+          undefined,
+          userFromDonor.bloodGroup,
+          userFromDonor.district,
+          userFromDonor.state
+        )
+        store.setCurrentUser(userFromDonor)
+        onLogin(userFromDonor)
+        return
+      }
+
+      // If totally new, create session and log in
+      const formattedPhone = isEmail ? '+91 98765 43210' : formatPhoneNumber(trimmedIdentifier)
+      const user = store.addUser(
+        trimmedIdentifier.split('@')[0],
+        formattedPhone,
+        isEmail ? trimmedIdentifier : `${cleanDigits || last10}@blink.org`
+      )
+      store.setCurrentUser(user)
+      onLogin(user)
     } catch (err: any) {
       const msg = err?.message || 'Invalid credentials. Please try again.'
       if (msg.toLowerCase().includes('not confirmed')) {
@@ -469,42 +686,40 @@ export default function Auth({ onLogin }: Props) {
 
     try {
       const formattedPhone = formatPhoneNumber(phone)
+      const cleanDigits = phone.replace(/\D/g, '')
       const trimmedName = name.trim()
-      const trimmedEmail = email.trim() || `${formattedPhone.replace(/\D/g, '')}@bloodlink.org`
+      const trimmedEmail = email.trim() || `${cleanDigits}@blink.org`
+      let authUserId = ''
 
       if (isSupabaseConfigured) {
-        // Sign up with Supabase using phone or email
-        let authUserId = ''
+        // Sign up with Supabase using email alias first (supported out-of-the-box without SMS provider setup)
         try {
-          const { data, error: authError } = await supabase.auth.signUp({
-            phone: formattedPhone,
+          const { data: emailData, error: emailAuthErr } = await supabase.auth.signUp({
+            email: trimmedEmail,
             password,
             options: {
               data: {
                 name: trimmedName,
-                email: trimmedEmail,
+                phone: formattedPhone,
               },
             },
           })
 
-          if (authError && !authError.message.toLowerCase().includes('already registered')) {
-            // Try email fallback if phone provider isn't enabled in Supabase dashboard
-            const { data: emailData, error: emailAuthErr } = await supabase.auth.signUp({
-              email: trimmedEmail,
+          if (emailAuthErr && !emailAuthErr.message.toLowerCase().includes('already registered')) {
+            // Also try phone signup if configured
+            const { data: phoneData } = await supabase.auth.signUp({
+              phone: formattedPhone,
               password,
               options: {
                 data: {
                   name: trimmedName,
-                  phone: formattedPhone,
+                  email: trimmedEmail,
                 },
               },
             })
-            if (emailAuthErr && !emailAuthErr.message.toLowerCase().includes('already registered')) {
-              throw new Error(emailAuthErr.message)
-            }
-            authUserId = emailData?.user?.id || ''
+            authUserId = phoneData?.user?.id || ''
           } else {
-            authUserId = data?.user?.id || ''
+            authUserId = emailData?.user?.id || ''
           }
         } catch (signUpErr) {
           console.warn('Supabase sign up warning:', signUpErr)
@@ -519,6 +734,7 @@ export default function Auth({ onLogin }: Props) {
             email: trimmedEmail,
             phone: formattedPhone,
             district,
+            state: state || DEFAULT_STATE,
             blood_group: isVolunteerDonor ? bloodGroup : null,
             is_donor: isVolunteerDonor,
           })
@@ -530,6 +746,7 @@ export default function Auth({ onLogin }: Props) {
               name: trimmedName,
               blood_group: bloodGroup,
               district,
+              state: state || DEFAULT_STATE,
               phone: formattedPhone,
               email: trimmedEmail,
               available: true,
@@ -538,53 +755,39 @@ export default function Auth({ onLogin }: Props) {
         } catch (dbErr) {
           console.warn('Supabase profile upsert notice:', dbErr)
         }
-
-        const newUser: CurrentUser = {
-          id: userId,
-          name: trimmedName,
-          email: trimmedEmail,
-          phone: formattedPhone,
-          state,
-          district,
-          bloodGroup: isVolunteerDonor ? bloodGroup : undefined,
-          isDonor: isVolunteerDonor,
-        }
-
-        store.setCurrentUser(newUser)
-        if (isVolunteerDonor) {
-          store.addDonor({
-            name: trimmedName,
-            bloodGroup,
-            state,
-            district,
-            phone: formattedPhone,
-            email: trimmedEmail,
-            lastDonation: null,
-            available: true,
-          })
-        }
-
-        onLogin(newUser)
-      } else {
-        // Local mode
-        const newUser = store.addUser(trimmedName, formattedPhone, trimmedEmail, undefined, bloodGroup, district, state)
-
-        if (isVolunteerDonor) {
-          store.addDonor({
-            name: trimmedName,
-            bloodGroup,
-            state,
-            district,
-            phone: formattedPhone,
-            email: trimmedEmail,
-            lastDonation: null,
-            available: true,
-          })
-        }
-
-        store.setCurrentUser(newUser)
-        onLogin(newUser)
       }
+
+      // Always persist to local store for offline/instant resilience
+      const newUser = store.addUser(
+        trimmedName,
+        formattedPhone,
+        trimmedEmail,
+        undefined,
+        isVolunteerDonor ? bloodGroup : undefined,
+        district,
+        state || DEFAULT_STATE
+      )
+      if (authUserId) {
+        newUser.id = authUserId
+      }
+      newUser.isDonor = isVolunteerDonor
+
+      if (isVolunteerDonor) {
+        store.addDonor({
+          name: trimmedName,
+          bloodGroup,
+          state: state || DEFAULT_STATE,
+          district,
+          phone: formattedPhone,
+          email: trimmedEmail,
+          lastDonation: null,
+          available: true,
+        })
+      }
+
+      await store.saveUserProfile(newUser, isVolunteerDonor, true)
+      store.setCurrentUser(newUser)
+      onLogin(newUser)
     } catch (err: any) {
       setError(err?.message || 'Account creation failed. Please check your inputs.')
     } finally {
