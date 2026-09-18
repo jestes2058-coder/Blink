@@ -117,13 +117,32 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
 
   function handlePreview(e: React.FormEvent) {
     e.preventDefault()
-    if (!patientName.trim()) return setError('Patient name is required.')
-    if (!district) return setError('Please select the patient hospital district.')
-    if (!hospital.trim()) return setError('Hospital or medical clinic name is required.')
+    if (!patientName.trim()) {
+      setError('Please enter the patient\'s full name.')
+      const el = document.getElementById('patientName')
+      if (el) el.focus()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    if (!district) {
+      setError('Please select the patient hospital district.')
+      const el = document.getElementById('requestDistrict')
+      if (el) el.focus()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    if (!hospital.trim()) {
+      setError('Hospital or medical clinic name is required.')
+      const el = document.getElementById('hospitalName')
+      if (el) el.focus()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
     setError('')
 
     setMatchCount(currentEligible.length)
     setStep('preview')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function handleSubmit() {
@@ -366,11 +385,23 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
             name="patientName"
             type="text"
             value={patientName}
-            onChange={(e) => setPatientName(e.target.value)}
+            onChange={(e) => {
+              setPatientName(e.target.value)
+              if (error) setError('')
+            }}
             placeholder="e.g. Anjali Menon"
             required
-            className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:bg-white transition"
+            className={`w-full px-4 py-3.5 bg-gray-50 border rounded-2xl text-sm focus:outline-none focus:ring-2 transition ${
+              error && !patientName.trim()
+                ? 'border-red-500 ring-2 ring-red-300 bg-red-50/40 text-red-950'
+                : 'border-gray-200 focus:ring-red-400 focus:bg-white'
+            }`}
           />
+          {error && !patientName.trim() && (
+            <p className="text-xs text-red-600 font-semibold mt-1 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5" /> Please enter the patient's full name to proceed
+            </p>
+          )}
         </div>
 
         {/* Blood Group Required */}
@@ -739,12 +770,31 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
         </div>
 
         {/* Live Reach Indicator */}
-        <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-red-900 font-semibold">
-            <Users className="w-4 h-4 text-red-600" />
-            <span>Eligible donors currently ready in {district}, {state}:</span>
+        <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
+          currentEligible.length > 0
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+            : 'bg-amber-50/80 border-amber-200 text-amber-950'
+        }`}>
+          <div className="text-xs">
+            <div className="flex items-center gap-2 font-bold">
+              <Users className={`w-4 h-4 ${currentEligible.length > 0 ? 'text-emerald-700' : 'text-amber-700'}`} />
+              <span>
+                {currentEligible.length > 0
+                  ? `${currentEligible.length} Verified ${bloodGroup} compatible donor${currentEligible.length > 1 ? 's' : ''} ready in ${district}`
+                  : `0 direct donors currently in ${district}`}
+              </span>
+            </div>
+            <p className="text-[11px] mt-0.5 opacity-85">
+              {currentEligible.length > 0
+                ? 'Donors will receive real-time push alerts, emergency sound chime, and situational emails upon submission.'
+                : `Your request will be broadcasted to all active donors across ${state} and displayed on the emergency board.`}
+            </p>
           </div>
-          <span className="text-xs font-black px-2.5 py-1 bg-white text-red-800 rounded-xl border border-red-200">
+          <span className={`text-xs font-black px-2.5 py-1.5 rounded-xl border flex-shrink-0 ${
+            currentEligible.length > 0
+              ? 'bg-white text-emerald-800 border-emerald-200 shadow-xs'
+              : 'bg-white text-amber-800 border-amber-200 shadow-xs'
+          }`}>
             {currentEligible.length} Donors Found
           </span>
         </div>
