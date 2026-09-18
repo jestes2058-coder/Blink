@@ -70,7 +70,7 @@ export default function Navbar({
               </div>
               <div className="flex flex-col">
                 <span className="text-lg sm:text-xl font-bold text-red-900 tracking-tight leading-none" style={{ fontFamily: "'DM Serif Display', serif" }}>
-                  BloodLink
+                  Blink
                 </span>
                 <span className="text-[8px] sm:text-[9px] font-bold text-red-600 tracking-wider uppercase leading-tight mt-0.5">
                   Community Match

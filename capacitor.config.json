@@ -1,6 +1,6 @@
 {
-  "appId": "com.bloodlink.app",
-  "appName": "BloodLink",
+  "appId": "com.blink.app",
+  "appName": "Blink",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

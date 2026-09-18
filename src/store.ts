@@ -156,7 +156,7 @@ export function generateDonorAlertEmail(request: BloodRequest, donor: Donor): { 
     : `📋 BLOOD REQUEST: ${request.bloodGroup} Scheduled Need at ${request.hospital}, ${request.district}`
 
   const plainText = `
-BLOODLINK TRANSFUSION ALERT - ${urgencyLabel}
+BLINK TRANSFUSION ALERT - ${urgencyLabel}
 ========================================================================
 
 Hello ${donor.name},
@@ -176,13 +176,13 @@ PATIENT & EMERGENCY DETAILS:
 - Medical / Emergency Notes: ${request.notes || 'Emergency transfusion required for inpatient care.'}
 
 HOW TO RESPOND:
-1. Open BloodLink App (or check Notifications tab).
+1. Open Blink App (or check Notifications tab).
 2. Tap "Accept Request" to share your availability.
 3. The coordinator will be notified and direct contact will be unlocked.
 
 Thank you for being a registered volunteer donor in your community!
 --
-BloodLink Transfusion Matching Network
+Blink Transfusion Matching Network
 `.trim()
 
   const htmlBody = `
@@ -202,7 +202,7 @@ BloodLink Transfusion Matching Network
           <tr>
             <td style="background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #450a0a 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
               <div style="display: inline-block; width: 44px; height: 44px; line-height: 44px; background: rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 12px; font-size: 22px;">🩸</div>
-              <h1 style="margin: 0 0 6px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">BloodLink Emergency Match</h1>
+              <h1 style="margin: 0 0 6px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Blink Emergency Match</h1>
               <p style="margin: 0; font-size: 13px; color: #fecaca; font-weight: 500;">Rapid Community Transfusion Alert</p>
             </td>
           </tr>
@@ -285,7 +285,7 @@ BloodLink Transfusion Matching Network
           <!-- Footer -->
           <tr>
             <td style="background: #f1f5f9; padding: 20px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0;">
-              This emergency message was sent to <strong>${donor.email}</strong> by BloodLink Transfusion System.<br>
+              This emergency message was sent to <strong>${donor.email}</strong> by Blink Transfusion System.<br>
               Every drop counts. Thank you for saving lives!
             </td>
           </tr>

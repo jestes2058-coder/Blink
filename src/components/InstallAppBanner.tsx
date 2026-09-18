@@ -35,7 +35,7 @@ export default function InstallAppBanner({ onInstall, deferredPrompt }: Props) {
             <Smartphone className="w-6 h-6 text-red-200" />
           </div>
           <div>
-            <p className="font-bold text-xs sm:text-sm text-white leading-tight">Install BloodLink Mobile App</p>
+            <p className="font-bold text-xs sm:text-sm text-white leading-tight">Install Blink Mobile App</p>
             <p className="text-[11px] text-red-200 mt-0.5">Quick access & emergency alerts on your home screen</p>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function InstallAppBanner({ onInstall, deferredPrompt }: Props) {
             </div>
 
             <p className="text-xs text-gray-600 leading-relaxed">
-              Install BloodLink directly to your iOS home screen for full offline capability and instant emergency alerts:
+              Install Blink directly to your iOS home screen for full offline capability and instant emergency alerts:
             </p>
 
             <div className="space-y-3 text-xs bg-red-50/60 p-4 rounded-2xl border border-red-100">

@@ -48,7 +48,7 @@ export default function Welcome({ onLogin }: Props) {
           </div>
           <div>
             <span className="text-2xl font-bold tracking-tight block" style={{ fontFamily: "'DM Serif Display', serif" }}>
-              BloodLink
+              Blink
             </span>
             <span className="text-[10px] uppercase font-bold tracking-widest text-red-200">
               Community Transfusion Match
@@ -265,7 +265,7 @@ export default function Welcome({ onLogin }: Props) {
 
       {/* Footer */}
       <div className="max-w-4xl mx-auto w-full text-center text-xs text-red-200/80 pt-6 border-t border-white/10">
-        BloodLink Community Transfusion Network · Free, Privacy-Preserving Blood Donor Matching
+        Blink Community Transfusion Network · Free, Privacy-Preserving Blood Donor Matching
       </div>
     </div>
   )

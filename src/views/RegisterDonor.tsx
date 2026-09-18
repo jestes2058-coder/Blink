@@ -184,7 +184,7 @@ export default function RegisterDonor({ user, setView, onRegistered, onToast }: 
           <Heart className="w-8 h-8 sm:w-10 sm:h-10 fill-emerald-600 animate-pulse" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900" style={{ fontFamily: "'DM Serif Display', serif" }}>
-          {existing ? 'Profile Updated!' : 'Welcome to BloodLink!'}
+          {existing ? 'Profile Updated!' : 'Welcome to Blink!'}
         </h2>
         <p className="text-gray-500 text-xs sm:text-sm">
           Your voluntary donor status is active for <strong>{bloodGroup}</strong> blood in <strong>{district}, {state}</strong>.

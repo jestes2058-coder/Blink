@@ -602,7 +602,7 @@ export default function Auth({ onLogin }: Props) {
           </div>
           <div>
             <span className="text-xl sm:text-2xl font-bold tracking-tight block leading-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
-              BloodLink
+              Blink
             </span>
             <span className="text-[9px] uppercase font-bold tracking-widest text-red-200 block">
               Transfusion Match
@@ -931,7 +931,7 @@ export default function Auth({ onLogin }: Props) {
                         <span className="text-[10px] text-gray-400">{incomingSmsPreview.time}</span>
                       </div>
                       <p className="text-xs text-gray-200 font-mono leading-tight">
-                        💬 BloodLink: Your 6-digit verification code is <strong className="text-yellow-300 font-bold tracking-widest text-sm bg-black/40 px-1.5 py-0.5 rounded">{incomingSmsPreview.code}</strong>. Valid for 10 min.
+                        💬 Blink: Your 6-digit verification code is <strong className="text-yellow-300 font-bold tracking-widest text-sm bg-black/40 px-1.5 py-0.5 rounded">{incomingSmsPreview.code}</strong>. Valid for 10 min.
                       </p>
                       <button
                         type="button"
@@ -1177,7 +1177,7 @@ export default function Auth({ onLogin }: Props) {
 
       {/* Footer */}
       <div className="w-full max-w-4xl mx-auto text-center text-[11px] text-red-200/80 pt-3 border-t border-white/10">
-        BloodLink Community Transfusion Network
+        Blink Community Transfusion Network
       </div>
     </div>
   )
