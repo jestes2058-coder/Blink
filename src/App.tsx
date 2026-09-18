@@ -178,13 +178,20 @@ export default function App() {
     window.addEventListener('storage', handleStorageChange)
     window.addEventListener('bloodlink_sos_broadcast', handleCustomBroadcast)
 
-    // 5. Periodic 5-Second Cloud Sync Polling Fallback
+    // 5. Periodic 3-Second Cloud Sync Polling Fallback (for instant cross-device sync)
     const pollInterval = setInterval(async () => {
       if (isSupabaseConfigured) {
+        const prevRequests = store.getRequests()
         await store.syncFromSupabase()
+        const newRequests = store.getRequests()
+
+        if (newRequests.length > prevRequests.length) {
+          const fresh = newRequests.filter(nr => !prevRequests.some(pr => pr.id === nr.id))
+          fresh.forEach(fr => handleIncomingSOS(fr))
+        }
         forceUpdate(n => n + 1)
       }
-    }, 5000)
+    }, 3000)
 
     // 6. Supabase Auth State Listener
     let authSubscription: { unsubscribe: () => void } | null = null

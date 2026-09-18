@@ -531,14 +531,12 @@ export const store = {
           id: donor.id,
           name: donor.name,
           blood_group: donor.bloodGroup,
-          state: donor.state,
           district: donor.district,
           phone: donor.phone,
-          email: donor.email,
-          avatar: donor.avatar,
+          email: donor.email || null,
           last_donation: donor.lastDonation,
           registered_at: donor.registeredAt,
-          total_donations: donor.totalDonations,
+          total_donations: donor.totalDonations || 0,
           available: donor.available ?? true,
         })
       } catch (e) {
@@ -658,10 +656,8 @@ export const store = {
           requestor_id: req.requestorId,
           requestor_name: req.requestorName,
           requestor_phone: req.requestorPhone,
-          requestor_avatar: req.requestorAvatar,
           patient_name: req.patientName,
           blood_group: req.bloodGroup,
-          state: req.state,
           district: req.district,
           urgency: req.urgency,
           hospital: req.hospital,
@@ -878,10 +874,8 @@ export const store = {
           phone: user.phone,
           email: user.email,
           blood_group: user.bloodGroup,
-          state: user.state,
           district: user.district,
           is_donor: isVolunteerDonor,
-          avatar: user.avatar,
           updated_at: new Date().toISOString(),
         })
       } catch (e) {
