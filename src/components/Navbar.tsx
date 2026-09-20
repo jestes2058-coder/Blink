@@ -95,7 +95,10 @@ export default function Navbar({
             </button>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-1 ml-2">
+            <nav
+              className="hidden lg:flex items-center gap-1 ml-2"
+              aria-label="Primary Navigation"
+            >
               {navLinks.slice(0, 6).map((item) => {
                 const Icon = item.icon
                 const isActive = currentView === item.view
@@ -103,7 +106,7 @@ export default function Navbar({
                   <button
                     key={item.view}
                     onClick={() => setView(item.view)}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 relative ${
+                    className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 relative focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none ${
                       isActive
                         ? "bg-red-50 text-red-700 font-extrabold"
                         : "text-gray-600 hover:text-red-700 hover:bg-red-50/50"
@@ -122,7 +125,7 @@ export default function Navbar({
 
               <button
                 onClick={() => setView("eligibility-quiz")}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none ${
                   currentView === "eligibility-quiz"
                     ? "bg-red-50 text-red-700"
                     : "text-gray-600 hover:text-red-700"
@@ -133,7 +136,7 @@ export default function Navbar({
               </button>
               <button
                 onClick={() => setView("blood-banks")}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none ${
                   currentView === "blood-banks"
                     ? "bg-red-50 text-red-700"
                     : "text-gray-600 hover:text-red-700"
@@ -150,7 +153,8 @@ export default function Navbar({
             {/* SOS Emergency Button */}
             <button
               onClick={onOpenSOS}
-              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-[11px] sm:text-xs font-extrabold rounded-xl shadow-md shadow-red-200 flex items-center gap-1 transition active:scale-95 animate-pulse"
+              aria-label="Trigger Emergency SOS Blood Broadcast"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-[11px] sm:text-xs font-extrabold rounded-xl shadow-md shadow-red-200 flex items-center gap-1 transition active:scale-95 animate-pulse focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
             >
               <Droplet className="w-3.5 h-3.5 fill-white" />
               <span>SOS</span>
@@ -159,8 +163,9 @@ export default function Navbar({
             {/* Desktop Active User Profile Badge */}
             <button
               onClick={onOpenEditProfile}
-              className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 hover:bg-red-50 border border-gray-200 hover:border-red-200 text-xs transition text-left group"
+              className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 hover:bg-red-50 border border-gray-200 hover:border-red-200 text-xs transition text-left group focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
               title="Click to edit profile & photo"
+              aria-label={`Open profile settings for ${user.name}`}
             >
               <UserAvatar
                 src={user.avatar || myProfile?.avatar}
@@ -184,7 +189,7 @@ export default function Navbar({
               onClick={onLogout}
               title="Sign Out"
               aria-label="Sign Out"
-              className="hidden sm:flex p-2 rounded-xl text-gray-600 hover:text-red-700 hover:bg-red-50 transition items-center gap-1 text-xs font-bold"
+              className="hidden sm:flex p-2 rounded-xl text-gray-600 hover:text-red-700 hover:bg-red-50 transition items-center gap-1 text-xs font-bold focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
             >
               <LogOut className="w-4 h-4" />
               <span>Sign Out</span>
@@ -193,8 +198,10 @@ export default function Navbar({
             {/* Mobile Menu Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-xl text-gray-600 hover:text-red-700 hover:bg-red-50 transition relative"
+              className="lg:hidden p-2 rounded-xl text-gray-600 hover:text-red-700 hover:bg-red-50 transition relative focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
               aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu-drawer"
             >
               {mobileMenuOpen ? (
                 <X className="w-5 h-5" />
@@ -211,7 +218,10 @@ export default function Navbar({
 
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
-        <div className="border-t border-red-100 bg-white/98 px-3.5 pt-3 pb-5 space-y-2.5 shadow-xl animate-in slide-in-from-top duration-200">
+        <div
+          id="mobile-menu-drawer"
+          className="border-t border-red-100 bg-white/98 px-3.5 pt-3 pb-5 space-y-2.5 shadow-xl animate-in slide-in-from-top duration-200"
+        >
           <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
             <button
               onClick={() => {

@@ -18,17 +18,14 @@ import { DEMO_USERS, store } from "../store"
 
 interface Props {
   onLogin: (user: CurrentUser) => void
-
   setView: (v: View) => void
 }
 
-export default function Welcome({ onLogin }: Props) {
+export default function Welcome({ onLogin, setView }: Props) {
   const [mode, setMode] = useState<"pick" | "new" | "returning">("pick")
-
   const [name, setName] = useState("")
-
   const [phone, setPhone] = useState("")
-
+  const [consent, setConsent] = useState(false)
   const [error, setError] = useState("")
 
   const users = store.getUsers()
@@ -42,20 +39,19 @@ export default function Welcome({ onLogin }: Props) {
     if (phone.replace(/\D/g, "").length < 7)
       return setError("Please enter a valid phone number (minimum 7 digits).")
 
+    if (!consent)
+      return setError("Please accept the Terms & Privacy Policy to proceed.")
+
     const existing = users.find((u) => u.phone === phone.trim())
 
     if (existing) {
       store.setCurrentUser(existing)
-
       onLogin(existing)
-
       return
     }
 
     const user = store.addUser(name.trim(), phone.trim())
-
     store.setCurrentUser(user)
-
     onLogin(user)
   }
 
@@ -280,9 +276,44 @@ export default function Welcome({ onLogin }: Props) {
                 </div>
               </div>
 
+              {/* Consent Checkbox */}
+              <div className="p-3 rounded-2xl bg-gray-50 border border-gray-200 text-xs">
+                <label className="flex items-start gap-2.5 cursor-pointer text-gray-700 select-none">
+                  <input
+                    id="welcomeConsent"
+                    name="welcomeConsent"
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    required
+                    className="mt-0.5 w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer flex-shrink-0"
+                  />
+                  <span className="leading-snug text-[11px]">
+                    I agree to the{" "}
+                    <button
+                      type="button"
+                      onClick={() => setView("privacy-policy")}
+                      className="text-red-700 underline font-bold hover:text-red-800"
+                    >
+                      Privacy Policy
+                    </button>{" "}
+                    and{" "}
+                    <button
+                      type="button"
+                      onClick={() => setView("terms-conditions")}
+                      className="text-red-700 underline font-bold hover:text-red-800"
+                    >
+                      Terms of Service
+                    </button>
+                    .
+                  </span>
+                </label>
+              </div>
+
               <button
                 type="submit"
-                className="w-full py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-sm rounded-2xl shadow-lg shadow-red-200 transition"
+                disabled={!consent}
+                className="w-full py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-sm rounded-2xl shadow-lg shadow-red-200 transition disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
               >
                 Continue to Dashboard
               </button>
@@ -331,11 +362,42 @@ export default function Welcome({ onLogin }: Props) {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="max-w-4xl mx-auto w-full text-center text-xs text-red-200/80 pt-6 border-t border-white/10">
-        B-Link Community Transfusion Network · Free, Privacy-Preserving Blood
-        Donor Matching
-      </div>
+      {/* Footer with Compliance & Policy Links */}
+      <footer className="max-w-4xl mx-auto w-full text-center text-xs text-red-200/80 pt-6 border-t border-white/10 space-y-2">
+        <p>
+          B-Link Community Transfusion Network · Free, Privacy-Preserving Blood
+          Donor Matching
+        </p>
+        <div className="flex items-center justify-center gap-4 text-[11px] text-red-200">
+          <button
+            onClick={() => setView("privacy-policy")}
+            className="hover:underline hover:text-white transition"
+          >
+            Privacy Policy
+          </button>
+          <span>·</span>
+          <button
+            onClick={() => setView("terms-conditions")}
+            className="hover:underline hover:text-white transition"
+          >
+            Terms & Medical Disclaimer
+          </button>
+          <span>·</span>
+          <button
+            onClick={() => setView("cookie-policy")}
+            className="hover:underline hover:text-white transition"
+          >
+            Cookie Policy
+          </button>
+          <span>·</span>
+          <button
+            onClick={() => setView("refund-policy")}
+            className="hover:underline hover:text-white transition"
+          >
+            Zero-Fee Policy
+          </button>
+        </div>
+      </footer>
     </div>
   )
 }

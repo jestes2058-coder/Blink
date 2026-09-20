@@ -57,6 +57,7 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
   const [hospital, setHospital] = useState("")
   const [unitsNeeded, setUnitsNeeded] = useState(1)
   const [notes, setNotes] = useState("")
+  const [requestConsent, setRequestConsent] = useState(false)
   const [error, setError] = useState("")
   const [matchCount, setMatchCount] = useState(0)
 
@@ -150,6 +151,12 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
       const el = document.getElementById("hospitalName")
       if (el) el.focus()
       window.scrollTo({ top: 0, behavior: "smooth" })
+      return
+    }
+    if (!requestConsent) {
+      setError(
+        "Please certify that this is a genuine medical blood requirement.",
+      )
       return
     }
     setError("")
@@ -967,9 +974,49 @@ export default function RequestBlood({ user, setView, onToast }: Props) {
           </span>
         </div>
 
+        {/* Genuine Request Certification Checkbox */}
+        <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+          <label className="flex items-start gap-3 cursor-pointer text-xs text-gray-700 select-none">
+            <input
+              id="requestConsentCheckbox"
+              name="requestConsent"
+              type="checkbox"
+              checked={requestConsent}
+              onChange={(e) => setRequestConsent(e.target.checked)}
+              required
+              aria-describedby="request-consent-disclaimer"
+              className="mt-0.5 h-4 w-4 rounded text-red-600 focus:ring-2 focus:ring-red-500 cursor-pointer flex-shrink-0"
+            />
+            <span id="request-consent-disclaimer" className="leading-relaxed">
+              I certify that this is a genuine medical blood requirement for a
+              hospitalized patient and consent to sharing patient blood group,
+              hospital location, and my contact details with matching volunteer
+              donors under the{" "}
+              <button
+                type="button"
+                onClick={() => setView("privacy-policy")}
+                className="text-red-700 underline font-bold hover:text-red-800"
+              >
+                Privacy Policy
+              </button>{" "}
+              and{" "}
+              <button
+                type="button"
+                onClick={() => setView("terms-conditions")}
+                className="text-red-700 underline font-bold hover:text-red-800"
+              >
+                Terms of Service
+              </button>
+              . I understand that blood cannot be bought or sold.
+            </span>
+          </label>
+        </div>
+
         <button
           type="submit"
-          className="w-full py-4 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-sm sm:text-base transition shadow-lg shadow-red-200 flex items-center justify-center gap-2"
+          disabled={!requestConsent}
+          aria-label="Preview request details and match donors"
+          className="w-full py-4 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-sm sm:text-base transition shadow-lg shadow-red-200 flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
         >
           <span>Preview & Match Donors</span>
           <ArrowRight className="w-4 h-4" />

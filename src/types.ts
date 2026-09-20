@@ -3,7 +3,7 @@ export type Urgency = "critical" | "urgent" | "planned"
 export type MatchStatus = "pending" | "accepted" | "declined"
 export type RequestStatus = "open" | "fulfilled" | "closed"
 
-export type View = "welcome" | "home" | "register-donor" | "request-blood" | "notifications" | "my-requests" | "donors-directory" | "compatibility" | "eligibility-quiz" | "blood-banks" | "donor-card" | "profile"
+export type View = "welcome" | "home" | "register-donor" | "request-blood" | "notifications" | "my-requests" | "donors-directory" | "compatibility" | "eligibility-quiz" | "blood-banks" | "donor-card" | "profile" | "privacy-policy" | "terms-conditions" | "cookie-policy" | "refund-policy"
 
 export interface CurrentUser {
   id: string

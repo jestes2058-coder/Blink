@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  AlertCircle,
   HelpCircle,
   RotateCcw,
   Heart,
@@ -74,7 +75,7 @@ export default function EligibilityQuiz({ setView }: Props) {
       correctAnswer: true,
 
       explanation:
-        "Minimum 50 kg body weight guarantees the body easily recovers after donating one standard unit.",
+        "Minimum 50 kg body weight ensures sufficient circulating blood volume for safe donor recovery.",
     },
 
     {
@@ -176,10 +177,21 @@ export default function EligibilityQuiz({ setView }: Props) {
         >
           Donor Health & Eligibility Screener
         </h1>
-        <p className="text-red-100 text-xs sm:text-sm max-w-xl">
-          Complete this quick 1-minute confidential screening to check if you
-          are ready to donate blood today.
+        <p className="text-red-100 text-xs sm:text-sm max-w-xl leading-relaxed">
+          Complete this quick 1-minute confidential self-assessment to check
+          baseline health and interval eligibility before heading to a donation
+          center.
         </p>
+        <div className="mt-3.5 p-3 rounded-2xl bg-black/20 border border-white/10 text-[11px] text-red-100/90 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-yellow-300 flex-shrink-0 mt-0.5" />
+          <span>
+            <strong>Medical Notice:</strong> This screener is for educational
+            self-assessment only and does not replace the mandatory clinical
+            evaluation (hemoglobin prick test, blood pressure, donor health
+            questionnaire) conducted by certified doctors at authorized blood
+            collection centers.
+          </span>
+        </div>
       </div>
 
       {!quizFinished ? (

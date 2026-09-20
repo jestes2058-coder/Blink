@@ -72,6 +72,7 @@ export default function RegisterDonor({
   const [lastDonation, setLastDonation] = useState(
     existing?.lastDonation ? existing.lastDonation.slice(0, 10) : "",
   )
+  const [consentGiven, setConsentGiven] = useState(false)
   const [error, setError] = useState("")
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -141,6 +142,11 @@ export default function RegisterDonor({
     }
     if (!district)
       return setError("Please select your residential or work district.")
+    if (!existing && !consentGiven) {
+      return setError(
+        "Please accept the Health Data Processing Consent and Terms to register as a donor.",
+      )
+    }
     setError("")
     setSaving(true)
 
@@ -558,10 +564,56 @@ export default function RegisterDonor({
           </p>
         </div>
 
+        {/* Explicit Affirmative Consent Checkbox */}
+        <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+          <label className="flex items-start gap-3 cursor-pointer text-xs text-gray-700 select-none">
+            <input
+              id="donorConsentCheckbox"
+              name="donorConsent"
+              type="checkbox"
+              checked={existing ? true : consentGiven}
+              onChange={(e) => setConsentGiven(e.target.checked)}
+              disabled={Boolean(existing)}
+              required={!existing}
+              aria-describedby="consent-disclaimer"
+              className="mt-0.5 h-4 w-4 rounded text-red-600 focus:ring-2 focus:ring-red-500 cursor-pointer flex-shrink-0"
+            />
+            <span id="consent-disclaimer" className="leading-relaxed">
+              I certify that I am 18+ years old and give explicit affirmative
+              consent to B-Link to securely process my blood group, general
+              district location, and contact information for emergency
+              transfusion matching in strict accordance with the{" "}
+              <button
+                type="button"
+                onClick={() => setView("privacy-policy")}
+                className="text-red-700 underline font-bold hover:text-red-800"
+              >
+                Privacy Policy
+              </button>{" "}
+              and{" "}
+              <button
+                type="button"
+                onClick={() => setView("terms-conditions")}
+                className="text-red-700 underline font-bold hover:text-red-800"
+              >
+                Terms of Service
+              </button>
+              . I understand that blood donation is 100% voluntary and unpaid.
+            </span>
+          </label>
+        </div>
+
         <button
           type="submit"
-          disabled={saving}
-          className="w-full py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-xs sm:text-sm transition shadow-lg shadow-red-200 flex items-center justify-center gap-2 disabled:opacity-50"
+          disabled={saving || (!existing && !consentGiven)}
+          aria-label={
+            saving
+              ? "Saving profile details"
+              : existing
+                ? "Save and update donor profile"
+                : "Submit volunteer donor registration"
+          }
+          className="w-full py-3.5 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold rounded-2xl text-xs sm:text-sm transition shadow-lg shadow-red-200 flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
         >
           <Heart className="w-4 h-4 fill-white" />
           <span>

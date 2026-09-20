@@ -14,7 +14,6 @@ import {
   Building2,
   ShieldCheck,
   Flame,
-  Sparkles,
   Phone,
   Edit3,
   Calendar,
@@ -171,13 +170,6 @@ export default function Home({
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="w-full max-w-xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-red-200 text-[11px] font-semibold mb-2.5 border border-white/10">
-              <Sparkles className="w-3 h-3 text-yellow-300" />
-              <span>
-                Transfusion & Matching Engine · {user.district || "Kerala"}
-              </span>
-            </div>
-
             <div className="flex items-center gap-3.5 mb-2">
               <UserAvatar
                 src={user.avatar || myDonorProfile?.avatar}

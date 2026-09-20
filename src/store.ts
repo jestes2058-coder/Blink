@@ -20,9 +20,7 @@ import {
   DEFAULT_DISTRICT,
   KERALA_DISTRICTS,
 } from "./data/indianLocations"
-import {
-  formatRequestSchedule,
-} from "./utils/dateSchedule"
+import { formatRequestSchedule } from "./utils/dateSchedule"
 
 // Strict Email Validator
 export function isValidEmail(email: string): boolean {
@@ -1006,7 +1004,7 @@ export const store = {
   setCurrentUser(u: CurrentUser) {
     localStorage.setItem("bd_current_user", JSON.stringify(u))
 
-    // Ensure this user exists in donors registry so matching & SOS notification is guaranteed
+    // Sync user details to donors registry for relevant district matching and SOS notification
     if (u.bloodGroup && u.phone) {
       const donors = this.getDonors()
       const existingIdx = donors.findIndex(
@@ -1522,6 +1520,37 @@ export const store = {
         ])
       } catch (e) {
         console.warn("Supabase clearAllData notice:", e)
+      }
+    }
+  },
+
+  // GDPR Right to Erasure / Right to be Forgotten
+  async forgetUserData(userId: string) {
+    // 1. Remove from local store
+    const donors = this.getDonors().filter((d) => d.id !== userId)
+    localStorage.setItem("bd_donors", JSON.stringify(donors))
+
+    const users = this.getUsers().filter((u) => u.id !== userId)
+    localStorage.setItem("bd_users", JSON.stringify(users))
+
+    const requests = this.getRequests().filter((r) => r.requestorId !== userId)
+    localStorage.setItem("bd_requests", JSON.stringify(requests))
+
+    const current = this.getCurrentUser()
+    if (current && current.id === userId) {
+      localStorage.removeItem("bd_current_user")
+    }
+
+    // 2. Remove from Supabase if connected
+    if (isSupabaseConfigured) {
+      try {
+        await Promise.allSettled([
+          supabase.from("donors").delete().eq("id", userId),
+          supabase.from("profiles").delete().eq("id", userId),
+          supabase.from("blood_requests").delete().eq("requestor_id", userId),
+        ])
+      } catch (e) {
+        console.warn("Supabase erasure notice:", e)
       }
     }
   },

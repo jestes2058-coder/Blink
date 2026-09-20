@@ -10,7 +10,6 @@ import {
   Droplet,
   MapPin,
   CheckCircle2,
-  Sparkles,
   AlertCircle,
   Eye,
   EyeOff,
@@ -69,6 +68,7 @@ export default function Auth({ onLogin }: Props) {
   const [bloodGroup, setBloodGroup] = useState<BloodGroup>("O+")
   const [state, setState] = useState(DEFAULT_STATE)
   const [district, setDistrict] = useState("Ernakulam")
+  const [agreeToTerms, setAgreeToTerms] = useState(false)
 
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -789,6 +789,10 @@ export default function Auth({ onLogin }: Props) {
     e.preventDefault()
     if (!password || password.length < 6)
       return setError("Password must be at least 6 characters.")
+    if (!agreeToTerms)
+      return setError(
+        "Please accept the Terms of Service & Privacy Policy to create your account.",
+      )
 
     setError("")
     setLoading(true)
@@ -936,10 +940,6 @@ export default function Auth({ onLogin }: Props) {
       <div className="w-full max-w-4xl mx-auto my-auto py-4 flex flex-col items-center justify-center">
         {/* Mobile Header Intro */}
         <div className="text-center mb-6 max-w-md mx-auto">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-800/80 border border-red-400/30 text-[11px] font-semibold text-red-100 mb-2">
-            <Sparkles className="w-3 h-3 text-yellow-300" />
-            <span>Emergency Blood Matching</span>
-          </div>
           <h1
             className="text-2xl sm:text-3xl font-bold tracking-tight text-white"
             style={{ fontFamily: "'DM Serif Display', serif" }}
@@ -1634,10 +1634,30 @@ export default function Auth({ onLogin }: Props) {
                     )}
                   </div>
 
+                  {/* Legal Terms & Consent Checkbox */}
+                  <div className="p-3 rounded-2xl bg-gray-50 border border-gray-200">
+                    <label className="flex items-start gap-2.5 cursor-pointer text-xs text-gray-700 select-none">
+                      <input
+                        id="authAgreeTerms"
+                        name="agreeTerms"
+                        type="checkbox"
+                        checked={agreeToTerms}
+                        onChange={(e) => setAgreeToTerms(e.target.checked)}
+                        required
+                        className="mt-0.5 w-4 h-4 text-red-600 rounded focus:ring-red-500 cursor-pointer flex-shrink-0"
+                      />
+                      <span className="leading-snug text-[11px]">
+                        I agree to the <strong>Terms of Service</strong>,{" "}
+                        <strong>Privacy Policy</strong>, and consent to
+                        voluntary emergency blood matching.
+                      </span>
+                    </label>
+                  </div>
+
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+                    disabled={loading || !agreeToTerms}
+                    className="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-red-200 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-2 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none"
                   >
                     {loading ? "Creating account..." : "Complete Registration"}
                     <ArrowRight className="w-4 h-4" />

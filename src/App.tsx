@@ -61,6 +61,13 @@ const InstallAppBanner = lazy(() => import("./components/InstallAppBanner"))
 const IncomingRequestAlertModal = lazy(
   () => import("./components/IncomingRequestAlertModal"),
 )
+const PrivacyPolicy = lazy(() => import("./views/PrivacyPolicy"))
+const TermsConditions = lazy(() => import("./views/TermsConditions"))
+const CookiePolicy = lazy(() => import("./views/CookiePolicy"))
+const RefundPolicy = lazy(() => import("./views/RefundPolicy"))
+
+import Footer from "./components/Footer"
+import CookieConsentBanner from "./components/CookieConsentBanner"
 
 function LoadingFallback() {
   return (
@@ -83,6 +90,7 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([])
   const [showSOSModal, setShowSOSModal] = useState(false)
   const [showEditProfileModal, setShowEditProfileModal] = useState(false)
+  const [showCookieSettingsModal, setShowCookieSettingsModal] = useState(false)
   const [incomingAlertRequest, setIncomingAlertRequest] =
     useState<BloodRequest | null>(null)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
@@ -407,16 +415,77 @@ export default function App() {
   }
 
   if (!user) {
+    const isLegalView =
+      view === "privacy-policy" ||
+      view === "terms-conditions" ||
+      view === "cookie-policy" ||
+      view === "refund-policy"
+
     return (
-      <div className="min-h-screen bg-[#FFF8F8] flex flex-col">
-        <Suspense fallback={<LoadingFallback />}>
-          <Auth onLogin={handleLogin} />
-          {/* PWA Install Banner */}
-          <InstallAppBanner
-            onInstall={handleInstallApp}
-            deferredPrompt={deferredPrompt}
-          />
-        </Suspense>
+      <div className="min-h-screen bg-[#FFF8F8] flex flex-col text-[#1A0505]">
+        {/* Skip to Main Content Link for Keyboard Accessibility */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-red-700 focus:text-white focus:font-bold focus:rounded-xl focus:shadow-lg focus:outline-none"
+        >
+          Skip to main content
+        </a>
+
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 flex flex-col focus:outline-none"
+        >
+          <Suspense fallback={<LoadingFallback />}>
+            {isLegalView ? (
+              <div className="flex-1">
+                {view === "privacy-policy" && (
+                  <PrivacyPolicy setView={setView} />
+                )}
+                {view === "terms-conditions" && (
+                  <TermsConditions setView={setView} />
+                )}
+                {view === "cookie-policy" && (
+                  <CookiePolicy
+                    setView={setView}
+                    onOpenCookieSettings={() =>
+                      setShowCookieSettingsModal(true)
+                    }
+                  />
+                )}
+                {view === "refund-policy" && <RefundPolicy setView={setView} />}
+              </div>
+            ) : (
+              <Auth onLogin={handleLogin} />
+            )}
+
+            {/* PWA Install Banner */}
+            <InstallAppBanner
+              onInstall={handleInstallApp}
+              deferredPrompt={deferredPrompt}
+            />
+          </Suspense>
+        </main>
+
+        {/* Global Accessible Footer */}
+        <Footer
+          setView={setView}
+          onOpenCookieSettings={() => setShowCookieSettingsModal(true)}
+        />
+
+        {/* Cookie Consent Banner and Preferences Modal */}
+        <CookieConsentBanner
+          isOpenModal={showCookieSettingsModal}
+          onCloseModal={() => setShowCookieSettingsModal(false)}
+          onOpenPrivacyPolicy={() => {
+            setView("privacy-policy")
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          }}
+          onOpenCookiePolicy={() => {
+            setView("cookie-policy")
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          }}
+        />
 
         {/* Toast Alert Notifications */}
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -508,6 +577,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF8F8] text-[#1A0505] relative">
+      {/* Skip to Main Content Link for Keyboard Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-red-700 focus:text-white focus:font-bold focus:rounded-xl focus:shadow-lg focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
       {/* Responsive Navbar */}
       <Navbar
         user={user}
@@ -562,7 +639,11 @@ export default function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-24 lg:pb-12 overflow-x-hidden">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 pb-24 lg:pb-8 overflow-x-hidden focus:outline-none"
+      >
         <Suspense fallback={<LoadingFallback />}>
           {view === "home" && (
             <Home
@@ -611,6 +692,19 @@ export default function App() {
           {view === "eligibility-quiz" && <EligibilityQuiz setView={setView} />}
 
           {view === "blood-banks" && <BloodBanks setView={setView} />}
+
+          {view === "privacy-policy" && <PrivacyPolicy setView={setView} />}
+
+          {view === "terms-conditions" && <TermsConditions setView={setView} />}
+
+          {view === "cookie-policy" && (
+            <CookiePolicy
+              setView={setView}
+              onOpenCookieSettings={() => setShowCookieSettingsModal(true)}
+            />
+          )}
+
+          {view === "refund-policy" && <RefundPolicy setView={setView} />}
         </Suspense>
       </main>
 
@@ -661,6 +755,26 @@ export default function App() {
           )
         })}
       </nav>
+
+      {/* Global Accessible Footer */}
+      <Footer
+        setView={setView}
+        onOpenCookieSettings={() => setShowCookieSettingsModal(true)}
+      />
+
+      {/* Cookie Consent Banner and Preferences Modal */}
+      <CookieConsentBanner
+        isOpenModal={showCookieSettingsModal}
+        onCloseModal={() => setShowCookieSettingsModal(false)}
+        onOpenPrivacyPolicy={() => {
+          setView("privacy-policy")
+          window.scrollTo({ top: 0, behavior: "smooth" })
+        }}
+        onOpenCookiePolicy={() => {
+          setView("cookie-policy")
+          window.scrollTo({ top: 0, behavior: "smooth" })
+        }}
+      />
 
       {/* Modals & Dialogs */}
       <Suspense fallback={null}>
